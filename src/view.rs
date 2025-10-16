@@ -6,6 +6,7 @@ use alloc::string::{String, ToString};
 use core::any::Any;
 use core::fmt::{Display, Formatter};
 
+/// The ID of a View. Should be unique for the lifetime of the application.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ViewId(Cow<'static, str>);
 
@@ -29,12 +30,15 @@ impl Display for ViewId {
     }
 }
 
+/// Indicates if the view grow, shrink, or maintain a fixed size in the specified direction.
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum Flex {
-    Intrinsic,
-    Resize,
+    Shrink,
+    Grow,
     Fixed,
 }
+
+/// Indicates if the view be aligned to the start, center, or end of the specified direction.
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Align {
     Start,
@@ -42,21 +46,43 @@ pub enum Align {
     End,
 }
 
+/// The primary UI component struct
 #[derive(Debug)]
 pub struct View {
+    /// The unique name of the view.
     pub name: ViewId,
+
+    /// The title of the view. Often used for the title of a button or label.
     pub title: String,
+
+    /// The current bounds of the view.
     pub bounds: Bounds,
 
+    /// Indicates if the view should grow, shrink, or have a fixed size along the vertical axis.
     pub v_flex: Flex,
+
+    /// Indicates if the view should grow, shrink, or have a fixed size along the horizontal axis.
     pub h_flex: Flex,
+
+    /// Indicates how the view should be aligned along horizontal axis.
     pub h_align: Align,
+
+    /// Indicates how the view should be aligned along vertical axis.
     pub v_align: Align,
 
+    /// Indicates if the view is visible or not.
     pub visible: bool,
-    pub input: Option<InputFn>,
+
+    /// an optional object representing the state of the view
     pub state: Option<Box<dyn Any>>,
+
+    /// an optional function to handle input events for this View
+    pub input: Option<InputFn>,
+
+    /// an optional function to perform layout for this View
     pub layout: Option<LayoutFn>,
+
+    /// an optional function to draw this View
     pub draw: Option<DrawFn>,
 }
 
@@ -65,27 +91,51 @@ impl View {
         self.name = name;
         self
     }
-    pub fn with_bounds(mut self, bounds: Bounds) -> View {
-        self.bounds = bounds;
+    pub fn with_title(mut self, title: String) -> View {
+        self.title = title;
         self
     }
-    pub fn with_layout(mut self, layout: Option<LayoutFn>) -> View {
-        self.layout = layout;
+    pub fn with_bounds(mut self, bounds: Bounds) -> View {
+        self.bounds = bounds;
         self
     }
     pub fn with_state(mut self, state: Option<Box<dyn Any>>) -> View {
         self.state = state;
         self
     }
-
+    pub fn with_input(mut self, input: Option<InputFn>) -> View {
+        self.input = input;
+        self
+    }
+    pub fn with_layout(mut self, layout: Option<LayoutFn>) -> View {
+        self.layout = layout;
+        self
+    }
+    pub fn with_draw(mut self, draw: Option<DrawFn>) -> View {
+        self.draw = draw;
+        self
+    }
     pub fn with_flex(mut self, h_flex: Flex, v_flex: Flex) -> View {
         self.h_flex = h_flex;
         self.v_flex = v_flex;
         self
     }
-}
-
-impl View {
+    pub fn with_h_flex(mut self, flex: Flex) -> View {
+        self.h_flex = flex;
+        self
+    }
+    pub fn with_v_flex(mut self, flex: Flex) -> View {
+        self.v_flex = flex;
+        self
+    }
+    pub fn with_h_align(mut self, align: Align) -> View {
+        self.h_align = align;
+        self
+    }
+    pub fn with_v_align(mut self, align: Align) -> View {
+        self.v_align = align;
+        self
+    }
     pub fn position_at(mut self, x: i32, y: i32) -> View {
         self.bounds.position.x = x;
         self.bounds.position.y = y;
@@ -100,19 +150,14 @@ impl View {
         self.visible = visible;
         self
     }
-    pub fn hide(&mut self) {
-        self.visible = false;
-    }
+}
+
+impl View {
     pub fn get_state<T: 'static>(&mut self) -> Option<&mut T> {
         if let Some(view) = &mut self.state {
             return view.downcast_mut::<T>();
         }
         None
-    }
-
-    pub fn with_draw_fn(mut self, draw: Option<DrawFn>) -> View {
-        self.draw = draw;
-        self
     }
 }
 
@@ -124,8 +169,8 @@ impl Default for View {
             title: id.to_string(),
             bounds: Default::default(),
 
-            h_flex: Flex::Intrinsic,
-            v_flex: Flex::Intrinsic,
+            h_flex: Flex::Shrink,
+            v_flex: Flex::Shrink,
             h_align: Align::Center,
             v_align: Align::Center,
 

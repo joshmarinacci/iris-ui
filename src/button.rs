@@ -1,7 +1,7 @@
 use crate::gfx::draw_centered_text;
 use crate::input::{InputEvent, OutputAction};
 use crate::util;
-use crate::view::Flex::Intrinsic;
+use crate::view::Flex::Shrink;
 use crate::view::{View, ViewId};
 use alloc::boxed::Box;
 use alloc::string::{String, ToString};
@@ -18,8 +18,8 @@ pub fn make_full_button(name: &ViewId, title: &str, command: &str, primary: bool
     View {
         name: name.clone(),
         title: title.to_string(),
-        h_flex: Intrinsic,
-        v_flex: Intrinsic,
+        h_flex: Shrink,
+        v_flex: Shrink,
         state: Some(Box::new(ButtonState {
             primary,
             command: command.into(),

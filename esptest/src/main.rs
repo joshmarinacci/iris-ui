@@ -151,8 +151,8 @@ fn make_gui_scene() -> Scene {
         name: ViewId::new("panel"),
         bounds: Bounds::new(20, 20, 200, 200),
         draw: Some(draw_std_panel),
-        h_flex: Flex::Resize,
-        v_flex: Flex::Resize,
+        h_flex: Flex::Grow,
+        v_flex: Flex::Grow,
         layout: Some(layout_hbox),
         ..Default::default()
     };

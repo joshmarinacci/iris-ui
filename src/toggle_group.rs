@@ -1,7 +1,7 @@
 use crate::geom::{Bounds, Point};
 use crate::gfx::draw_centered_text;
 use crate::input::{InputEvent, OutputAction};
-use crate::view::Flex::{Intrinsic, Resize};
+use crate::view::Flex::{Grow, Shrink};
 use crate::view::{View, ViewId};
 use crate::{DrawEvent, GuiEvent, LayoutEvent};
 use alloc::boxed::Box;
@@ -20,8 +20,8 @@ pub fn make_toggle_group(name: &ViewId, data: Vec<&str>, selected: usize) -> Vie
         layout: Some(layout_toggle_group),
         draw: Some(draw_toggle_group),
         visible: true,
-        h_flex: Resize,
-        v_flex: Intrinsic,
+        h_flex: Grow,
+        v_flex: Shrink,
         ..Default::default()
     }
 }
@@ -112,10 +112,10 @@ pub fn layout_toggle_group(pass: &mut LayoutEvent) {
     if let Some(view) = pass.scene.get_view_mut(pass.target) {
         let char_size = pass.theme.font.character_size;
         let height = char_size.height + (char_size.height / 2) * 2; // padding
-        if view.h_flex == Resize {
+        if view.h_flex == Grow {
             view.bounds.size.w = pass.space.w;
         }
-        if view.h_flex == Intrinsic {
+        if view.h_flex == Shrink {
             if let Some(state) = view.get_state::<SelectOneOfState>() {
                 let mut width = 0;
                 for item in &state.items {
@@ -126,10 +126,10 @@ pub fn layout_toggle_group(pass: &mut LayoutEvent) {
                 view.bounds.size.w = width;
             }
         }
-        if view.v_flex == Resize {
+        if view.v_flex == Grow {
             view.bounds.size.h = pass.space.h;
         }
-        if view.v_flex == Intrinsic {
+        if view.v_flex == Shrink {
             view.bounds.size.h = height as i32;
         }
     }
@@ -137,9 +137,9 @@ pub fn layout_toggle_group(pass: &mut LayoutEvent) {
 }
 mod tests {
     use crate::geom::{Bounds, Point};
-    use crate::scene::{Scene, click_at, draw_scene, layout_scene};
+    use crate::scene::{click_at, draw_scene, layout_scene, Scene};
     use crate::test::MockDrawingContext;
-    use crate::toggle_group::{SelectOneOfState, make_toggle_group};
+    use crate::toggle_group::{make_toggle_group, SelectOneOfState};
     use crate::view::ViewId;
     use alloc::vec;
 

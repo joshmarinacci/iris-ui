@@ -31,7 +31,7 @@ use iris_ui::panel::{draw_std_panel, make_panel, PanelState};
 use iris_ui::tabbed_panel::{make_tabbed_panel, LayoutPanelState};
 use iris_ui::text_input::make_text_input;
 use iris_ui::util::hex_str_to_rgb565;
-use iris_ui::view::Flex::{Fixed, Intrinsic, Resize};
+use iris_ui::view::Flex::{Fixed, Grow, Shrink};
 use iris_ui::view::{Align, View, ViewId};
 use log::{info, LevelFilter};
 
@@ -57,7 +57,7 @@ fn make_scene() -> Scene {
     }
 
     {
-        let mut grid = make_grid_panel(BUTTONS_PANEL).with_flex(Resize, Resize);
+        let mut grid = make_grid_panel(BUTTONS_PANEL).with_flex(Grow, Grow);
         let mut grid_layout = GridLayoutState::new_row_column(4, 30, 3, 100);
         grid_layout.debug = false;
         grid_layout.border_visible = false;
@@ -84,7 +84,7 @@ fn make_scene() -> Scene {
 
         let mut button3 =
             make_toggle_group(&ViewId::new("toggle2"), vec!["Apple", "Ball", "Car"], 1);
-        button3.h_flex = Intrinsic;
+        button3.h_flex = Shrink;
         button3.h_align = Align::Center;
         grid_layout.constraints.insert(
             (&button3.name).clone(),
@@ -137,7 +137,7 @@ fn make_scene() -> Scene {
     {
         let mut wrapper = make_panel(&LISTS_PANEL)
             .with_visible(false)
-            .with_flex(Resize, Resize)
+            .with_flex(Grow, Grow)
             .with_state(Some(Box::new(PanelState {
                 gap: 0,
                 border_visible: false,
@@ -166,7 +166,7 @@ fn make_scene() -> Scene {
                 border_visible: false,
                 padding: Insets::new_same(0),
             })))
-            .with_flex(Resize, Resize)
+            .with_flex(Grow, Grow)
             .with_visible(false);
         scene.add_view_to_parent(
             make_text_input("text input", "input").position_at(10, 10),
@@ -182,7 +182,7 @@ fn make_scene() -> Scene {
                 gap: 0,
                 padding: Insets::new_same(10),
             })))
-            .with_flex(Resize, Resize);
+            .with_flex(Grow, Grow);
         let themes_list_id = ViewId::new("themes-list");
         let themes = make_list_view(
             &themes_list_id,

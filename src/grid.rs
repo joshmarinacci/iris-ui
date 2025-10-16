@@ -1,5 +1,5 @@
 use crate::geom::{Bounds, Insets, Point};
-use crate::view::Flex::{Intrinsic, Resize};
+use crate::view::Flex::{Grow, Shrink};
 use crate::view::{Align, View, ViewId};
 use crate::{DrawEvent, LayoutEvent};
 use alloc::boxed::Box;
@@ -130,14 +130,14 @@ fn layout_grid(pass: &mut LayoutEvent) {
         return;
     };
     // let padding = state.padding.clone();
-    if view.h_flex == Resize {
+    if view.h_flex == Grow {
         view.bounds.size.w = pass.space.w;
     }
-    if view.h_flex == Intrinsic {}
-    if view.v_flex == Resize {
+    if view.h_flex == Shrink {}
+    if view.v_flex == Grow {
         view.bounds.size.h = pass.space.h;
     }
-    if view.v_flex == Intrinsic {}
+    if view.v_flex == Shrink {}
 
     let parent_bounds = view.bounds.clone();
     let kids = pass.scene.get_children_ids(pass.target);
@@ -179,9 +179,9 @@ impl Into<ViewId> for &'static str {
 mod tests {
     use crate::button::make_button;
     use crate::geom::Bounds;
-    use crate::grid::{GridLayoutState, LayoutConstraint, make_grid_panel};
+    use crate::grid::{make_grid_panel, GridLayoutState, LayoutConstraint};
     use crate::label::make_label;
-    use crate::scene::{Scene, draw_scene, layout_scene};
+    use crate::scene::{draw_scene, layout_scene, Scene};
     use crate::test::MockDrawingContext;
     use crate::view::Align::Start;
     use crate::view::ViewId;

@@ -1,14 +1,14 @@
 use crate::gfx::TextStyle;
 use crate::util;
-use crate::view::Flex::Intrinsic;
+use crate::view::Flex::Shrink;
 use crate::view::{View, ViewId};
 
 pub fn make_label(name: &'static str, title: &str) -> View {
     View {
         name: ViewId::new(name),
         title: title.into(),
-        h_flex: Intrinsic,
-        v_flex: Intrinsic,
+        h_flex: Shrink,
+        v_flex: Shrink,
         layout: Some(|e| {
             if let Some(view) = e.scene.get_view_mut(e.target) {
                 view.bounds.size = util::calc_size(e.theme.font, &view.title);
@@ -26,8 +26,8 @@ pub fn make_header_label(name: &'static str, title: &str) -> View {
     View {
         name: ViewId::new(name),
         title: title.into(),
-        h_flex: Intrinsic,
-        v_flex: Intrinsic,
+        h_flex: Shrink,
+        v_flex: Shrink,
         layout: Some(|e| {
             if let Some(view) = e.scene.get_view_mut(e.target) {
                 view.bounds.size = util::calc_size(e.theme.font, &view.title);
