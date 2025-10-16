@@ -50,6 +50,24 @@ impl GridLayoutState {
         self.constraints
             .insert(name.clone(), LayoutConstraint::at_row_column(row, col))
     }
+    pub fn place_at_row_column_with_spans(
+        &mut self,
+        p0: &ViewId,
+        row: usize,
+        col: usize,
+        col_span: usize,
+        row_span: usize,
+    ) {
+        self.constraints.insert(
+            (p0).clone(),
+            LayoutConstraint {
+                row,
+                col,
+                col_span,
+                row_span,
+            },
+        );
+    }
 }
 
 pub struct LayoutConstraint {
@@ -179,9 +197,9 @@ impl Into<ViewId> for &'static str {
 mod tests {
     use crate::button::make_button;
     use crate::geom::Bounds;
-    use crate::grid::{make_grid_panel, GridLayoutState, LayoutConstraint};
+    use crate::grid::{GridLayoutState, LayoutConstraint, make_grid_panel};
     use crate::label::make_label;
-    use crate::scene::{draw_scene, layout_scene, Scene};
+    use crate::scene::{Scene, draw_scene, layout_scene};
     use crate::test::MockDrawingContext;
     use crate::view::Align::Start;
     use crate::view::ViewId;

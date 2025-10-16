@@ -242,7 +242,7 @@ impl Scene {
             count: 0,
         }
     }
-    pub fn new() -> Scene {
+    pub(crate) fn new() -> Scene {
         let bounds = Bounds::new(0, 0, 200, 200);
         Self::new_with_bounds(bounds)
     }

@@ -1,10 +1,10 @@
+use crate::LayoutEvent;
 use crate::geom::{Bounds, Insets};
 use crate::input::OutputAction;
 use crate::scene::Scene;
 use crate::toggle_group::{input_toggle_group, make_toggle_group};
 use crate::view::Flex::Grow;
 use crate::view::{Flex, View, ViewId};
-use crate::LayoutEvent;
 use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use alloc::vec;
@@ -134,7 +134,7 @@ mod tests {
     use crate::geom::{Bounds, Size};
     use crate::layouts::{layout_hbox, layout_std_panel, layout_vbox};
     use crate::panel::make_panel;
-    use crate::scene::{layout_scene, Scene};
+    use crate::scene::{Scene, layout_scene};
     use crate::tabbed_panel::make_tabbed_panel;
     use crate::test::MockDrawingContext;
     use crate::view::Align::{Center, End, Start};

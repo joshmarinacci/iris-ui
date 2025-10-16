@@ -31,6 +31,7 @@ use iris_ui::panel::{draw_std_panel, make_panel, PanelState};
 use iris_ui::tabbed_panel::{make_tabbed_panel, LayoutPanelState};
 use iris_ui::text_input::make_text_input;
 use iris_ui::util::hex_str_to_rgb565;
+use iris_ui::view::Align::{Center, Start};
 use iris_ui::view::Flex::{Fixed, Grow, Shrink};
 use iris_ui::view::{Align, View, ViewId};
 use log::{info, LevelFilter};
@@ -83,18 +84,10 @@ fn make_scene() -> Scene {
         scene.add_view_to_parent(toggle1, &grid.name);
 
         let mut button3 =
-            make_toggle_group(&ViewId::new("toggle2"), vec!["Apple", "Ball", "Car"], 1);
-        button3.h_flex = Shrink;
-        button3.h_align = Align::Center;
-        grid_layout.constraints.insert(
-            (&button3.name).clone(),
-            LayoutConstraint {
-                row: 3,
-                col: 0,
-                col_span: 2,
-                row_span: 1,
-            },
-        );
+            make_toggle_group(&ViewId::new("toggle2"), vec!["Apple", "Ball", "Car"], 1)
+                .with_h_flex(Shrink)
+                .with_h_align(Center);
+        grid_layout.place_at_row_column_with_spans(&button3.name, 3, 0, 2, 1);
         scene.add_view_to_parent(button3, &grid.name);
 
         grid.state = Some(Box::new(grid_layout));
@@ -103,17 +96,13 @@ fn make_scene() -> Scene {
     {
         let wrapper = make_panel(LAYOUT_PANEL)
             .with_layout(Some(layout_hbox))
+            .with_h_flex(Grow)
             .with_visible(false);
 
         {
-            let col1 = make_column("vbox2");
+            let col1 = make_column("col1").with_v_flex(Grow).with_h_flex(Grow);
             scene.add_view_to_parent(make_label("vbox-label", "vbox layout"), &col1.name);
-            let vbox = View {
-                name: ViewId::new("vbox"),
-                draw: Some(draw_std_panel),
-                layout: Some(layout_vbox),
-                ..Default::default()
-            };
+            let vbox = make_panel(&ViewId::new("vbox_1")).with_layout(Some(layout_vbox));
             scene.add_view_to_parent(make_button(&ViewId::new("vbox-button1"), "A"), &vbox.name);
             scene.add_view_to_parent(make_button(&ViewId::new("vbox-button2"), "B"), &vbox.name);
             scene.add_view_to_parent(make_button(&ViewId::new("vbox-button3"), "C"), &vbox.name);
@@ -122,9 +111,9 @@ fn make_scene() -> Scene {
         }
 
         {
-            let col2 = make_column("vbox3");
+            let col2 = make_column("col2").with_v_align(Start).with_h_flex(Grow);
             scene.add_view_to_parent(make_label("hbox-label", "hbox layout"), &col2.name);
-            let hbox = make_row("hbox");
+            let hbox = make_panel(&ViewId::new("hbox_1")).with_layout(Some(layout_hbox));
             scene.add_view_to_parent(make_button(&ViewId::new("hbox-button1"), "A"), &hbox.name);
             scene.add_view_to_parent(make_button(&ViewId::new("hbox-button2"), "B"), &hbox.name);
             scene.add_view_to_parent(make_button(&ViewId::new("hbox-button3"), "C"), &hbox.name);
@@ -223,12 +212,6 @@ fn make_column(name: &'static str) -> View {
     make_panel(&ViewId::new(name))
         .with_state(Some(Box::new(PanelState::new())))
         .with_layout(Some(layout_vbox))
-}
-
-fn make_row(name: &'static str) -> View {
-    make_panel(&ViewId::new(name))
-        .with_layout(Some(layout_hbox))
-        .with_state(Some(Box::new(PanelState::new())))
 }
 
 fn main() -> Result<(), std::convert::Infallible> {
