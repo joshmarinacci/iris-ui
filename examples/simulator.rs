@@ -100,7 +100,7 @@ fn make_scene() -> Scene {
             .with_visible(false);
 
         {
-            let col1 = make_column("col1").with_v_flex(Grow).with_h_flex(Grow);
+            let col1 = make_column("col1").with_v_flex(Grow); //.with_h_flex(Grow);
             scene.add_view_to_parent(make_label("vbox-label", "vbox layout"), &col1.name);
             let vbox = make_panel(&ViewId::new("vbox_1")).with_layout(Some(layout_vbox));
             scene.add_view_to_parent(make_button(&ViewId::new("vbox-button1"), "A"), &vbox.name);
@@ -111,7 +111,7 @@ fn make_scene() -> Scene {
         }
 
         {
-            let col2 = make_column("col2").with_v_align(Start).with_h_flex(Grow);
+            let col2 = make_column("col2").with_v_align(Start); //.with_h_flex(Grow);
             scene.add_view_to_parent(make_label("hbox-label", "hbox layout"), &col2.name);
             let hbox = make_panel(&ViewId::new("hbox_1")).with_layout(Some(layout_hbox));
             scene.add_view_to_parent(make_button(&ViewId::new("hbox-button1"), "A"), &hbox.name);
