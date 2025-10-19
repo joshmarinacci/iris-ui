@@ -1,8 +1,9 @@
-use crate::geom::{Bounds, Point};
-use crate::view::Flex::{Intrinsic, Resize};
+use crate::geom::{Bounds, Insets, Point};
+use crate::view::Flex::{Grow, Shrink};
 use crate::view::{Align, View, ViewId};
 use crate::{DrawEvent, LayoutEvent};
 use alloc::boxed::Box;
+use alloc::string::ToString;
 use embedded_graphics::pixelcolor::{Rgb565, RgbColor};
 use hashbrown::HashMap;
 
@@ -13,6 +14,9 @@ pub struct GridLayoutState {
     col_width: usize,
     row_height: usize,
     pub debug: bool,
+    pub gap: i32,
+    pub border_visible: bool,
+    pub padding: Insets,
 }
 
 impl GridLayoutState {
@@ -29,6 +33,9 @@ impl GridLayoutState {
             col_width,
             row_height,
             debug: false,
+            border_visible: true,
+            gap: 0,
+            padding: Insets::new_same(0),
         }
     }
 }
@@ -42,6 +49,24 @@ impl GridLayoutState {
     ) -> Option<LayoutConstraint> {
         self.constraints
             .insert(name.clone(), LayoutConstraint::at_row_column(row, col))
+    }
+    pub fn place_at_row_column_with_spans(
+        &mut self,
+        p0: &ViewId,
+        row: usize,
+        col: usize,
+        col_span: usize,
+        row_span: usize,
+    ) {
+        self.constraints.insert(
+            (p0).clone(),
+            LayoutConstraint {
+                row,
+                col,
+                col_span,
+                row_span,
+            },
+        );
     }
 }
 
@@ -66,7 +91,7 @@ impl LayoutConstraint {
 pub fn make_grid_panel(name: &ViewId) -> View {
     View {
         name: name.clone(),
-        title: name.as_str().into(),
+        title: name.to_string(),
         state: Some(Box::new(GridLayoutState {
             constraints: HashMap::new(),
             col_count: 2,
@@ -74,6 +99,9 @@ pub fn make_grid_panel(name: &ViewId) -> View {
             col_width: 100,
             row_height: 30,
             debug: false,
+            gap: 0,
+            padding: Insets::new_same(0),
+            border_visible: false,
         })),
         layout: Some(layout_grid),
         draw: Some(draw_grid),
@@ -84,10 +112,13 @@ pub fn make_grid_panel(name: &ViewId) -> View {
 
 fn draw_grid(evt: &mut DrawEvent) {
     let bounds = evt.view.bounds;
-    evt.ctx.fill_rect(&evt.view.bounds, &evt.theme.bg);
-    evt.ctx.stroke_rect(&evt.view.bounds, &evt.theme.fg);
-    let padding = evt.view.padding;
+    evt.ctx
+        .fill_rect(&evt.view.bounds, &evt.theme.standard.fill);
     if let Some(state) = evt.view.get_state::<GridLayoutState>() {
+        let padding = state.padding;
+        if state.border_visible {
+            evt.ctx.stroke_rect(&bounds, &evt.theme.standard.text);
+        }
         if state.debug {
             for i in 0..state.col_count + 1 {
                 let x = (i * state.col_width) as i32 + bounds.x() + padding.left;
@@ -108,44 +139,50 @@ fn draw_grid(evt: &mut DrawEvent) {
 }
 
 fn layout_grid(pass: &mut LayoutEvent) {
-    if let Some(view) = pass.scene.get_view_mut(pass.target) {
-        if view.h_flex == Resize {
-            view.bounds.size.w = pass.space.w;
-        }
-        if view.h_flex == Intrinsic {}
-        if view.v_flex == Resize {
-            view.bounds.size.h = pass.space.h;
-        }
-        if view.v_flex == Intrinsic {}
+    let padding = if let Some(state) = pass.scene.get_view_state::<GridLayoutState>(pass.target) {
+        state.padding
+    } else {
+        Insets::new_same(0)
+    };
+    let Some(view) = pass.scene.get_view_mut(pass.target) else {
+        return;
+    };
+    // let padding = state.padding.clone();
+    if view.h_flex == Grow {
+        view.bounds.size.w = pass.space.w;
+    }
+    if view.h_flex == Shrink {}
+    if view.v_flex == Grow {
+        view.bounds.size.h = pass.space.h;
+    }
+    if view.v_flex == Shrink {}
 
-        let parent_bounds = view.bounds.clone();
-        let padding = view.padding.clone();
-        let kids = pass.scene.get_children_ids(pass.target);
-        let space = parent_bounds.size.clone() - padding;
-        for kid in kids {
-            pass.layout_child(&kid, space);
-            if let Some(state) = pass.scene.get_view_state::<GridLayoutState>(pass.target) {
-                let cell_bounds = if let Some(cons) = &state.constraints.get(&kid) {
-                    let x = (cons.col * state.col_width) as i32 + padding.left;
-                    let y = (cons.row * state.row_height) as i32 + padding.top;
-                    let w = state.col_width as i32 * cons.col_span as i32;
-                    let h = state.row_height as i32 * cons.row_span as i32;
-                    Bounds::new(x, y, w, h)
-                } else {
-                    Bounds::new(0, 0, 0, 0)
+    let parent_bounds = view.bounds.clone();
+    let kids = pass.scene.get_children_ids(pass.target);
+    let space = parent_bounds.size.clone() - padding;
+    for kid in kids {
+        pass.layout_child(&kid, space);
+        if let Some(state) = pass.scene.get_view_state::<GridLayoutState>(pass.target) {
+            let cell_bounds = if let Some(cons) = &state.constraints.get(&kid) {
+                let x = (cons.col * state.col_width) as i32 + padding.left;
+                let y = (cons.row * state.row_height) as i32 + padding.top;
+                let w = state.col_width as i32 * cons.col_span as i32;
+                let h = state.row_height as i32 * cons.row_span as i32;
+                Bounds::new(x, y, w, h)
+            } else {
+                Bounds::new(0, 0, 0, 0)
+            };
+            if let Some(view) = pass.scene.get_view_mut(&kid) {
+                view.bounds.position.x = match &view.h_align {
+                    Align::Start => cell_bounds.x(),
+                    Align::Center => cell_bounds.x() + (cell_bounds.w() - view.bounds.w()) / 2,
+                    Align::End => cell_bounds.x() + cell_bounds.w() - view.bounds.w(),
                 };
-                if let Some(view) = pass.scene.get_view_mut(&kid) {
-                    view.bounds.position.x = match &view.h_align {
-                        Align::Start => cell_bounds.x(),
-                        Align::Center => cell_bounds.x() + (cell_bounds.w() - view.bounds.w()) / 2,
-                        Align::End => cell_bounds.x() + cell_bounds.w() - view.bounds.w(),
-                    };
-                    view.bounds.position.y = match &view.v_align {
-                        Align::Start => cell_bounds.y(),
-                        Align::Center => cell_bounds.y() + (cell_bounds.h() - view.bounds.h()) / 2,
-                        Align::End => cell_bounds.y() + cell_bounds.h() - view.bounds.h(),
-                    };
-                }
+                view.bounds.position.y = match &view.v_align {
+                    Align::Start => cell_bounds.y(),
+                    Align::Center => cell_bounds.y() + (cell_bounds.h() - view.bounds.h()) / 2,
+                    Align::End => cell_bounds.y() + cell_bounds.h() - view.bounds.h(),
+                };
             }
         }
     }

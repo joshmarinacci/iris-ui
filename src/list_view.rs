@@ -1,7 +1,8 @@
 use crate::geom::Bounds;
 use crate::gfx::draw_centered_text;
+use crate::input::{InputEvent, OutputAction, TextAction};
 use crate::view::{View, ViewId};
-use crate::{Action, DrawEvent, EventType, GuiEvent, KeyboardAction, LayoutEvent};
+use crate::{DrawEvent, GuiEvent, LayoutEvent};
 use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
@@ -12,7 +13,7 @@ use log::info;
 pub fn make_list_view(name: &ViewId, data: Vec<&str>, selected: usize) -> View {
     View {
         name: name.clone(),
-        title: name.as_str().into(),
+        title: name.to_string(),
         state: Some(ListState::new_with(data, selected)),
         input: Some(input_list),
         layout: Some(layout_list),
@@ -48,9 +49,9 @@ impl ListState {
     }
 }
 
-fn input_list(e: &mut GuiEvent) -> Option<Action> {
+fn input_list(e: &mut GuiEvent) -> Option<OutputAction> {
     match &e.event_type {
-        EventType::Tap(pt) => {
+        InputEvent::Tap(pt) => {
             e.scene.mark_dirty_view(e.target);
             e.scene.set_focused(e.target);
             if let Some(view) = e.scene.get_view_mut(e.target) {
@@ -61,31 +62,31 @@ fn input_list(e: &mut GuiEvent) -> Option<Action> {
                     let n = y / cell_height;
                     if n >= 0 && n < state.items.len() as i32 {
                         state.selected = n as usize;
-                        return Some(Action::Command(state.items[state.selected].clone()));
+                        return Some(OutputAction::Command(state.items[state.selected].clone()));
                     }
                 }
             }
         }
-        EventType::Scroll(_x, y) => {
+        InputEvent::Scroll(delta) => {
             e.scene.mark_dirty_view(e.target);
             if let Some(state) = e.scene.get_view_state::<ListState>(e.target) {
-                if *y > 0 {
+                if delta.y > 0 {
                     state.select_next();
                 }
-                if *y < 0 {
+                if delta.y < 0 {
                     state.select_prev();
                 }
             }
         }
-        EventType::KeyboardAction(action) => {
+        InputEvent::Text(action) => {
             e.scene.mark_dirty_view(e.target);
             if let Some(state) = e.scene.get_view_state::<ListState>(e.target) {
                 match action {
-                    KeyboardAction::Up => state.select_prev(),
-                    KeyboardAction::Down => state.select_next(),
-                    KeyboardAction::Return => {
+                    TextAction::Up => state.select_prev(),
+                    TextAction::Down => state.select_next(),
+                    TextAction::Enter => {
                         info!("firmly selecting the item");
-                        return Some(Action::Command(
+                        return Some(OutputAction::Command(
                             state.items[state.selected as usize].clone(),
                         ));
                     }
@@ -100,15 +101,15 @@ fn input_list(e: &mut GuiEvent) -> Option<Action> {
 
 fn draw_list(e: &mut DrawEvent) {
     let bounds = e.view.bounds;
-    e.ctx.fill_rect(&e.view.bounds, &e.theme.bg);
+    e.ctx.fill_rect(&e.view.bounds, &e.theme.standard.fill);
     let name = e.view.name.clone();
     if let Some(state) = e.view.get_state::<ListState>() {
         let cell_height = bounds.h() / (state.items.len() as i32);
         for (i, item) in state.items.iter().enumerate() {
-            let (bg, fg) = if i == state.selected {
-                (&e.theme.selected_bg, &e.theme.selected_fg)
+            let style = if i == state.selected {
+                &e.theme.selected
             } else {
-                (&e.theme.bg, &e.theme.fg)
+                &e.theme.standard
             };
             let bds = Bounds::new(
                 bounds.x(),
@@ -118,19 +119,19 @@ fn draw_list(e: &mut DrawEvent) {
             );
             // draw background only if selected
             if i == state.selected {
-                e.ctx.fill_rect(&bds, bg);
+                e.ctx.fill_rect(&bds, &style.fill);
                 if let Some(focused) = e.focused {
                     if focused == &name {
-                        e.ctx.stroke_rect(&bds.contract(2), fg);
+                        e.ctx.stroke_rect(&bds.contract(2), &style.text);
                     }
                 }
             }
 
             // draw text
-            draw_centered_text(e.ctx, item, &bds, &e.theme.font, fg);
+            draw_centered_text(e.ctx, item, &bds, &e.theme.font, &style.text);
         }
     }
-    e.ctx.stroke_rect(&e.view.bounds, &e.theme.fg);
+    e.ctx.stroke_rect(&e.view.bounds, &e.theme.standard.text);
 }
 
 fn layout_list(e: &mut LayoutEvent) {

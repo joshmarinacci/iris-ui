@@ -1,8 +1,9 @@
 use crate::geom::{Bounds, Point};
 use crate::gfx::draw_centered_text;
-use crate::view::Flex::{Intrinsic, Resize};
+use crate::input::{InputEvent, OutputAction};
+use crate::view::Flex::{Grow, Shrink};
 use crate::view::{View, ViewId};
-use crate::{Action, DrawEvent, EventType, GuiEvent, LayoutEvent};
+use crate::{DrawEvent, GuiEvent, LayoutEvent};
 use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
@@ -11,16 +12,16 @@ use core::option::Option::Some;
 
 pub fn make_toggle_group(name: &ViewId, data: Vec<&str>, selected: usize) -> View {
     View {
-        name: *name,
-        title: name.as_str().into(),
+        name: name.clone(),
+        title: name.to_string(),
         bounds: Bounds::new(0, 0, (data.len() * 60) as i32, 30),
         state: Some(SelectOneOfState::new_with(data, selected)),
         input: Some(input_toggle_group),
         layout: Some(layout_toggle_group),
         draw: Some(draw_toggle_group),
         visible: true,
-        h_flex: Resize,
-        v_flex: Intrinsic,
+        h_flex: Grow,
+        v_flex: Shrink,
         ..Default::default()
     }
 }
@@ -39,9 +40,9 @@ impl SelectOneOfState {
     }
 }
 
-pub fn input_toggle_group(e: &mut GuiEvent) -> Option<Action> {
+pub fn input_toggle_group(e: &mut GuiEvent) -> Option<OutputAction> {
     match &e.event_type {
-        EventType::Tap(pt) => {
+        InputEvent::Tap(pt) => {
             e.scene.mark_dirty_view(e.target);
             e.scene.set_focused(e.target);
             if let Some(view) = e.scene.get_view_mut(e.target) {
@@ -52,7 +53,7 @@ pub fn input_toggle_group(e: &mut GuiEvent) -> Option<Action> {
                     let n = x / cell_width;
                     if n >= 0 && n < state.items.len() as i32 {
                         state.selected = n as usize;
-                        return Some(Action::Command(state.items[state.selected].clone()));
+                        return Some(OutputAction::Command(state.items[state.selected].clone()));
                     }
                 }
             }
@@ -64,15 +65,15 @@ pub fn input_toggle_group(e: &mut GuiEvent) -> Option<Action> {
 
 fn draw_toggle_group(e: &mut DrawEvent) {
     let bounds = e.view.bounds;
-    e.ctx.fill_rect(&e.view.bounds, &e.theme.bg);
+    e.ctx.fill_rect(&e.view.bounds, &e.theme.standard.fill);
     let name = e.view.name.clone();
     if let Some(state) = e.view.get_state::<SelectOneOfState>() {
         let cell_width = bounds.size.w / (state.items.len() as i32);
         for (i, item) in state.items.iter().enumerate() {
-            let (bg, fg) = if i == state.selected {
-                (&e.theme.selected_bg, &e.theme.selected_fg)
+            let style = if i == state.selected {
+                e.theme.selected
             } else {
-                (&e.theme.bg, &e.theme.fg)
+                e.theme.standard
             };
             let bds = Bounds::new(
                 bounds.position.x + (i as i32) * cell_width + 1,
@@ -82,16 +83,16 @@ fn draw_toggle_group(e: &mut DrawEvent) {
             );
             // draw background only if selected
             if i == state.selected {
-                e.ctx.fill_rect(&bds, bg);
+                e.ctx.fill_rect(&bds, &style.fill);
                 if let Some(focused) = e.focused {
                     if focused == &name {
-                        e.ctx.stroke_rect(&bds.contract(2), fg);
+                        e.ctx.stroke_rect(&bds.contract(2), &style.text);
                     }
                 }
             }
 
             // draw text
-            draw_centered_text(e.ctx, item, &bds, &e.theme.font, fg);
+            draw_centered_text(e.ctx, item, &bds, &e.theme.font, &style.text);
 
             // draw left edge except for the first one
             if i != 0 {
@@ -99,22 +100,22 @@ fn draw_toggle_group(e: &mut DrawEvent) {
                 e.ctx.line(
                     &Point::new(x, bounds.y()),
                     &Point::new(x, bounds.position.y + bounds.size.h - 1),
-                    &e.theme.fg,
+                    &e.theme.standard.text,
                 );
             }
         }
     }
-    e.ctx.stroke_rect(&e.view.bounds, &e.theme.fg);
+    e.ctx.stroke_rect(&e.view.bounds, &e.theme.standard.text);
 }
 
 pub fn layout_toggle_group(pass: &mut LayoutEvent) {
     if let Some(view) = pass.scene.get_view_mut(pass.target) {
         let char_size = pass.theme.font.character_size;
         let height = char_size.height + (char_size.height / 2) * 2; // padding
-        if view.h_flex == Resize {
+        if view.h_flex == Grow {
             view.bounds.size.w = pass.space.w;
         }
-        if view.h_flex == Intrinsic {
+        if view.h_flex == Shrink {
             if let Some(state) = view.get_state::<SelectOneOfState>() {
                 let mut width = 0;
                 for item in &state.items {
@@ -125,10 +126,10 @@ pub fn layout_toggle_group(pass: &mut LayoutEvent) {
                 view.bounds.size.w = width;
             }
         }
-        if view.v_flex == Resize {
+        if view.v_flex == Grow {
             view.bounds.size.h = pass.space.h;
         }
-        if view.v_flex == Intrinsic {
+        if view.v_flex == Shrink {
             view.bounds.size.h = height as i32;
         }
     }

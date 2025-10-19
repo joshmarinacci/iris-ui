@@ -1,12 +1,13 @@
 use crate::geom::Insets;
 use crate::gfx::draw_centered_text;
+use crate::input::OutputAction;
 use crate::view::{View, ViewId};
-use crate::{Action, DrawEvent, GuiEvent, LayoutEvent, util};
+use crate::{DrawEvent, GuiEvent, LayoutEvent, util};
 use alloc::boxed::Box;
 
 pub fn make_toggle_button(name: &ViewId, title: &str) -> View {
     View {
-        name: *name,
+        name: name.clone(),
         title: title.into(),
         state: Some(Box::new(SelectedState::new())),
         draw: Some(draw_toggle_button),
@@ -27,34 +28,39 @@ impl SelectedState {
 }
 
 fn draw_toggle_button(e: &mut DrawEvent) {
-    let (bg, fg) = if let Some(state) = e.view.get_state::<SelectedState>() {
-        if state.selected {
-            (&e.theme.selected_bg, &e.theme.selected_fg)
-        } else {
-            (&e.theme.bg, &e.theme.fg)
-        }
+    let style = if let Some(state) = e.view.get_state::<SelectedState>()
+        && state.selected
+    {
+        e.theme.selected
     } else {
-        (&e.theme.bg, &e.theme.fg)
+        e.theme.standard
     };
 
-    e.ctx.fill_rect(&e.view.bounds, bg);
-    e.ctx.stroke_rect(&e.view.bounds, &e.theme.fg);
+    e.ctx.fill_rect(&e.view.bounds, &style.fill);
+    e.ctx.stroke_rect(&e.view.bounds, &style.text);
     if let Some(focused) = e.focused {
         let focus_insets = Insets::new_same(2);
         if focused == &e.view.name {
-            e.ctx.stroke_rect(&((*&e.view.bounds) - focus_insets), fg);
+            e.ctx
+                .stroke_rect(&((*&e.view.bounds) - focus_insets), &style.text);
         }
     }
 
-    draw_centered_text(e.ctx, &e.view.title, &e.view.bounds, &e.theme.font, fg);
+    draw_centered_text(
+        e.ctx,
+        &e.view.title,
+        &e.view.bounds,
+        &e.theme.font,
+        &style.text,
+    );
 }
 
-fn input_toggle_button(event: &mut GuiEvent) -> Option<Action> {
+fn input_toggle_button(event: &mut GuiEvent) -> Option<OutputAction> {
     if let Some(state) = event.scene.get_view_state::<SelectedState>(event.target) {
         state.selected = !state.selected;
         event.scene.set_focused(event.target);
         event.scene.mark_dirty_view(event.target);
-        return Some(Action::Generic);
+        return Some(OutputAction::Selected("toggle".into(), 0));
     }
     None
 }

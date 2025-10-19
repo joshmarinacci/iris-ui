@@ -1,24 +1,31 @@
 use crate::LayoutEvent;
-use crate::geom::{Insets, Size};
+use crate::geom::Size;
+use crate::panel::PanelState;
 use crate::view::Align::{Center, End, Start};
-use crate::view::Flex::Resize;
-use crate::view::{Flex, ViewId};
-use Flex::Intrinsic;
+use crate::view::Flex;
+use crate::view::Flex::Grow;
+use Flex::{Fixed, Shrink};
 use log::info;
 
 pub fn layout_vbox(pass: &mut LayoutEvent) {
     let Some(parent) = pass.scene.get_view_mut(&pass.target) else {
-        info!("view not found!");
         return;
     };
+    let Some(panel_state) = parent.get_state::<PanelState>() else {
+        return;
+    };
+    let gap = panel_state.gap;
+    let padding = panel_state.padding.clone();
     let h_flex = parent.h_flex.clone();
-    let padding = parent.padding.clone();
-    let mut available_space: Size = pass.space - parent.padding;
+    let mut available_space: Size = pass.space - padding;
+    if h_flex == Fixed {
+        available_space.w = parent.bounds.size.w;
+    }
 
     // get the intrinsic children
     let fixed_kids = pass
         .scene
-        .get_children_ids_filtered(&pass.target, |v| v.v_flex == Intrinsic);
+        .get_children_ids_filtered(&pass.target, |v| v.v_flex == Shrink);
     // lay out the intrinsic children
     for kid in &fixed_kids {
         pass.layout_child(kid, available_space);
@@ -37,7 +44,7 @@ pub fn layout_vbox(pass: &mut LayoutEvent) {
     // layout the flex children
     let flex_kids = pass
         .scene
-        .get_children_ids_filtered(&pass.target, |v| v.v_flex == Flex::Resize);
+        .get_children_ids_filtered(&pass.target, |v| v.v_flex == Flex::Grow);
     if flex_kids.len() > 0 {
         let flex_space = Size {
             w: pass.space.w - padding.left - padding.right,
@@ -55,7 +62,7 @@ pub fn layout_vbox(pass: &mut LayoutEvent) {
             max_width = max_width.max(kid.bounds.size.w);
         }
     }
-    if h_flex == Intrinsic {
+    if h_flex == Shrink {
         available_space.w = max_width;
     }
 
@@ -71,21 +78,21 @@ pub fn layout_vbox(pass: &mut LayoutEvent) {
                 End => (avail_w - kid.bounds.size.w),
             } + padding.left;
             kid.bounds.position.y = y;
-            y += kid.bounds.size.h;
+            y += kid.bounds.size.h + gap;
         }
     }
     // layout self
     if let Some(view) = pass.scene.get_view_mut(&pass.target) {
-        if view.h_flex == Resize {
-            view.bounds.size.w = pass.space.w
-        }
-        if view.h_flex == Intrinsic {
-            view.bounds.size.w = max_width + padding.left + padding.right
-        }
-        if view.v_flex == Resize {
-            view.bounds.size.h = pass.space.h
-        }
-        if view.v_flex == Intrinsic {}
+        view.bounds.size.w = match &view.h_flex {
+            Fixed => view.bounds.size.w,
+            Shrink => max_width + padding.left + padding.right,
+            Grow => pass.space.w,
+        };
+        view.bounds.size.h = match &view.v_flex {
+            Fixed => view.bounds.size.h,
+            Shrink => view.bounds.size.h,
+            Grow => pass.space.h,
+        };
     }
 }
 
@@ -93,23 +100,29 @@ pub fn layout_hbox(pass: &mut LayoutEvent) {
     let Some(parent) = pass.scene.get_view_mut(&pass.target) else {
         return;
     };
+    let Some(state) = parent.get_state::<PanelState>() else {
+        return;
+    };
+    let gap = state.gap;
+    let padding = state.padding;
+
     let h_flex = parent.h_flex.clone();
     let v_flex = parent.v_flex.clone();
+
     // layout self
-    if v_flex == Resize {
+    if v_flex == Grow {
         parent.bounds.size.h = pass.space.h
     }
-    if h_flex == Resize {
+    if h_flex == Grow {
         parent.bounds.size.w = pass.space.w
     }
 
-    let padding = parent.padding.clone();
     let mut available_space = pass.space - padding;
 
     // get the fixed children
     let fixed_kids = pass
         .scene
-        .get_children_ids_filtered(&pass.target, |v| v.h_flex == Intrinsic);
+        .get_children_ids_filtered(&pass.target, |v| v.h_flex == Shrink);
 
     // layout the fixed width children
     for kid in &fixed_kids {
@@ -127,7 +140,7 @@ pub fn layout_hbox(pass: &mut LayoutEvent) {
     // get the flex children
     let flex_kids = pass
         .scene
-        .get_children_ids_filtered(&pass.target, |v| v.h_flex == Flex::Resize);
+        .get_children_ids_filtered(&pass.target, |v| v.h_flex == Flex::Grow);
     // if there are any flex children
     if flex_kids.len() > 0 {
         // split the leftover space
@@ -150,7 +163,7 @@ pub fn layout_hbox(pass: &mut LayoutEvent) {
     }
 
     // now position all children
-    if v_flex == Intrinsic {
+    if v_flex == Shrink {
         available_space.h = max_height;
     }
     let avail_h = available_space.h;
@@ -159,6 +172,7 @@ pub fn layout_hbox(pass: &mut LayoutEvent) {
         if let Some(kid) = pass.scene.get_view_mut(&kid) {
             kid.bounds.position.x = x;
             x += kid.bounds.size.w;
+            x += gap;
             kid.bounds.position.y = match &kid.v_align {
                 Start => 0,
                 Center => (avail_h - kid.bounds.size.h) / 2,
@@ -167,26 +181,33 @@ pub fn layout_hbox(pass: &mut LayoutEvent) {
         }
     }
     if let Some(parent) = pass.scene.get_view_mut(pass.target) {
-        if parent.v_flex == Intrinsic {
+        if parent.v_flex == Shrink {
             parent.bounds.size.h = available_space.h + padding.top + padding.bottom;
         }
-        if parent.h_flex == Intrinsic {
+        if parent.h_flex == Shrink {
             parent.bounds.size.w = x;
         }
     }
 }
 
 pub fn layout_std_panel(pass: &mut LayoutEvent) {
-    if let Some(view) = pass.scene.get_view_mut(&pass.target) {
-        if view.v_flex == Resize {
-            view.bounds.size.h = pass.space.h;
-        }
-        if view.h_flex == Resize {
-            view.bounds.size.w = pass.space.w;
-        }
-        let space = view.bounds.size.clone() - view.padding;
-        pass.layout_all_children(&pass.target.clone(), space);
+    let Some(view) = pass.scene.get_view_mut(&pass.target) else {
+        info!("view not found!");
+        return;
+    };
+    let Some(state) = view.get_state::<PanelState>() else {
+        return;
+    };
+    let padding = state.padding.clone();
+
+    if view.v_flex == Grow {
+        view.bounds.size.h = pass.space.h;
     }
+    if view.h_flex == Grow {
+        view.bounds.size.w = pass.space.w;
+    }
+    let space = view.bounds.size.clone() - padding;
+    pass.layout_all_children(&pass.target.clone(), space);
 }
 
 #[cfg(test)]
@@ -194,14 +215,17 @@ pub(crate) mod tests {
     use crate::LayoutEvent;
     use crate::geom::{Bounds, Insets, Point, Size};
     use crate::layouts::{layout_std_panel, layout_vbox};
+    use crate::panel::PanelState;
     use crate::scene::{Scene, layout_scene};
     use crate::test::MockDrawingContext;
     use crate::view::Align::Start;
     use crate::view::{Align, Flex, View, ViewId};
+    use alloc::boxed::Box;
     use test_log::test;
+
     pub(crate) fn layout_button(layout: &mut LayoutEvent) {
         if let Some(view) = layout.scene.get_view_mut(&layout.target) {
-            view.bounds.size = Size::new((view.title.len() * 10) as i32, 10) + view.padding;
+            view.bounds.size = Size::new((view.title.len() * 10) as i32, 10);
         }
     }
     #[test]
@@ -210,7 +234,6 @@ pub(crate) mod tests {
             name: "button1".into(),
             title: "abc".into(),
             layout: Some(layout_button),
-            padding: Insets::new_same(10),
             ..Default::default()
         };
 
@@ -221,7 +244,7 @@ pub(crate) mod tests {
         // size = 3 letters x 10x10 font + 10px padding
         assert_eq!(
             view_bounds(&scene, &"button1".into()).size,
-            Size::new(3 * 10 + 20, 10 + 20),
+            Size::new(3 * 10, 10),
             "button size is wrong"
         );
     }
@@ -241,13 +264,17 @@ pub(crate) mod tests {
         let parent_view = View {
             name: parent_id.clone(),
             title: "parent".into(),
-            padding: Insets::new_same(10),
+            state: Some(Box::new(PanelState {
+                border_visible: true,
+                padding: Insets::new_same(10),
+                gap: 0,
+            })),
             bounds: Bounds {
                 position: Point::new(-99, -99),
                 size: Size::new(100, 100),
             },
-            h_flex: Flex::Resize,
-            v_flex: Flex::Resize,
+            h_flex: Flex::Grow,
+            v_flex: Flex::Grow,
             h_align: Start,
             v_align: Start,
             layout: Some(layout_vbox),
@@ -295,8 +322,8 @@ pub(crate) mod tests {
             View {
                 name: child4_id.clone(),
                 title: "ch4".into(),
-                h_flex: Flex::Resize,
-                v_flex: Flex::Resize,
+                h_flex: Flex::Grow,
+                v_flex: Flex::Grow,
                 layout: Some(layout_std_panel),
                 ..Default::default()
             },
@@ -321,7 +348,7 @@ pub(crate) mod tests {
             }
             // center align
             if let Some(view) = scene.get_view(&child2_id) {
-                assert_eq!(view.bounds.position, Point::new(10 + (180 - 30) / 2, 20));
+                assert_eq!(view.bounds.position, Point::new(0 + (180 - 10) / 2, 20));
                 assert_eq!(view.bounds.size, Size::new(30, 10));
             }
             // right align
@@ -332,8 +359,8 @@ pub(crate) mod tests {
             // should fill rest of the space
             assert!(scene.has_view(&child4_id));
             if let Some(view) = scene.get_view(&child4_id) {
-                assert_eq!(view.bounds.position, Point::new(10, 40));
-                assert_eq!(view.bounds.size, Size::new(180, 180 - 30));
+                assert_eq!(view.bounds.position, Point::new(50, 40));
+                assert_eq!(view.bounds.size, Size::new(100, 180 - 80));
             }
         }
     }

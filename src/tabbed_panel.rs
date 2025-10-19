@@ -1,11 +1,12 @@
+use crate::LayoutEvent;
 use crate::geom::{Bounds, Insets};
+use crate::input::OutputAction;
 use crate::scene::Scene;
 use crate::toggle_group::{input_toggle_group, make_toggle_group};
-use crate::view::Flex::Resize;
+use crate::view::Flex::Grow;
 use crate::view::{Flex, View, ViewId};
-use crate::{Action, LayoutEvent};
 use alloc::boxed::Box;
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::vec;
 use alloc::vec::Vec;
 use hashbrown::HashMap;
@@ -20,7 +21,7 @@ impl LayoutPanelState {
     pub fn register_panel(&mut self, tab_name: &str, content_id: &ViewId) {
         info!("registering panel {tab_name} with content {content_id}");
         self.data.push(tab_name.into());
-        self.contents.insert(tab_name.into(), *content_id);
+        self.contents.insert(tab_name.into(), content_id.clone());
     }
 }
 
@@ -49,15 +50,14 @@ pub fn make_tabbed_panel(
 
             // hide all the children
             for kid in e.scene.get_children_ids(&container) {
-                if kid.as_str() != "tabs" {
+                if kid.to_string() != "tabs" {
                     e.scene.hide_view(&kid);
                 }
             }
 
             // then make the newly selected one visible
             match action {
-                Action::Generic => {}
-                Action::Command(cmd) => {
+                OutputAction::Command(cmd) => {
                     let panel_name = if let Some(state) =
                         e.scene.get_view_state::<LayoutPanelState>(&container)
                     {
@@ -75,6 +75,7 @@ pub fn make_tabbed_panel(
                         e.scene.show_view(&panel);
                     }
                 }
+                _ => {}
             }
         }
         return None;
@@ -82,13 +83,13 @@ pub fn make_tabbed_panel(
     scene.add_view_to_parent(tabs, name);
 
     View {
-        name: *name,
+        name: name.clone(),
         bounds: Bounds::new(10, 10, 320 - 20, 180),
-        h_flex: Flex::Intrinsic,
-        v_flex: Flex::Intrinsic,
+        h_flex: Flex::Shrink,
+        v_flex: Flex::Shrink,
         draw: Some(|e| {
-            e.ctx.fill_rect(&e.view.bounds, &e.theme.bg);
-            e.ctx.stroke_rect(&e.view.bounds, &e.theme.fg);
+            e.ctx.fill_rect(&e.view.bounds, &e.theme.panel.fill);
+            e.ctx.stroke_rect(&e.view.bounds, &e.theme.panel.text);
         }),
         state: Some(Box::new(state)),
         layout: Some(layout_tabbed_panel),
@@ -99,10 +100,10 @@ pub fn make_tabbed_panel(
 pub fn layout_tabbed_panel(pass: &mut LayoutEvent) {
     if let Some(view) = pass.scene.get_view_mut(&pass.target) {
         // layout self
-        if view.h_flex == Resize {
+        if view.h_flex == Grow {
             view.bounds.size.w = pass.space.w;
         }
-        if view.v_flex == Resize {
+        if view.v_flex == Grow {
             view.bounds.size.h = pass.space.h;
         }
 
@@ -113,7 +114,7 @@ pub fn layout_tabbed_panel(pass: &mut LayoutEvent) {
 
         // layout content panels
         if let Some(view) = pass.scene.get_view(&tabs_id) {
-            let insets = Insets::new(view.bounds.size.h, 0, 0, 0);
+            let insets = Insets::new(view.bounds.size.h, 1, 1, 1);
             for kid in &pass.scene.get_children_ids(&pass.target) {
                 if kid == &tabs_id {
                     continue;
@@ -121,6 +122,7 @@ pub fn layout_tabbed_panel(pass: &mut LayoutEvent) {
                 pass.layout_child(kid, space - insets);
                 if let Some(view) = pass.scene.get_view_mut(kid) {
                     view.bounds.position.y = insets.top;
+                    view.bounds.position.x = insets.left;
                 }
             }
         }
@@ -131,38 +133,26 @@ pub fn layout_tabbed_panel(pass: &mut LayoutEvent) {
 mod tests {
     use crate::geom::{Bounds, Size};
     use crate::layouts::{layout_hbox, layout_std_panel, layout_vbox};
+    use crate::panel::make_panel;
     use crate::scene::{Scene, layout_scene};
-    use crate::tabbed_panel::layout_tabbed_panel;
+    use crate::tabbed_panel::make_tabbed_panel;
     use crate::test::MockDrawingContext;
-    use crate::toggle_group::layout_toggle_group;
     use crate::view::Align::{Center, End, Start};
-    use crate::view::{Flex, View, ViewId};
+    use crate::view::Flex::Grow;
+    use crate::view::{Flex, ViewId};
+    use alloc::vec;
 
     #[test]
     fn test_complex_tabbed_panels() {
         let mut scene = Scene::new();
         // tab panel test
         let tabbed_panel: ViewId = "tabbed_panel_id".into();
-        let tabs: ViewId = "tabs".into();
         {
-            let mut tabbed_panel_view: View = View {
-                name: tabbed_panel.clone(),
-                ..Default::default()
-            };
-            tabbed_panel_view.h_flex = Flex::Resize;
-            tabbed_panel_view.v_flex = Flex::Resize;
-            tabbed_panel_view.layout = Some(layout_tabbed_panel);
+            let mut tabbed_panel_view =
+                make_tabbed_panel(&tabbed_panel, vec!["tab1", "tab2"], 0, &mut scene);
+            tabbed_panel_view.h_flex = Flex::Grow;
+            tabbed_panel_view.v_flex = Flex::Grow;
             scene.add_view_to_parent(tabbed_panel_view, &scene.root_id());
-
-            // tab panel tabs has intrisic height but flex width
-            let mut tabbed_panel_tabs: View = View {
-                name: tabs.clone(),
-                ..Default::default()
-            };
-            tabbed_panel_tabs.h_flex = Flex::Resize;
-            tabbed_panel_tabs.v_flex = Flex::Intrinsic;
-            tabbed_panel_tabs.layout = Some(layout_toggle_group);
-            scene.add_view_to_parent(tabbed_panel_tabs, &tabbed_panel);
         }
 
         // has three tabs contents
@@ -170,10 +160,9 @@ mod tests {
         // first tab panel is an hbox with three buttons vertically centered and left aligned
         let tab1: ViewId = "tab1".into();
         {
-            let mut view = crate::layouts::tests::make_standard_view(&tab1);
-            view.h_flex = Flex::Resize;
-            view.v_flex = Flex::Resize;
-            view.layout = Some(layout_hbox);
+            let view = make_panel(&tab1)
+                .with_layout(Some(layout_hbox))
+                .with_flex(Grow, Grow);
             scene.add_view_to_parent(view, &tabbed_panel);
 
             let b1: ViewId = "tab1_button1".into();
@@ -206,18 +195,17 @@ mod tests {
         // and the first one takes all vertical space and horizontal space
         let tab2: ViewId = "tab2".into();
         {
-            let mut view = crate::layouts::tests::make_standard_view(&tab2);
-            view.h_flex = Flex::Resize;
-            view.v_flex = Flex::Resize;
-            view.layout = Some(layout_vbox);
+            let view = make_panel(&tab2)
+                .with_layout(Some(layout_vbox))
+                .with_flex(Grow, Grow);
             scene.add_view_to_parent(view, &tabbed_panel);
 
             let b1: ViewId = "tab2_button1".into();
             {
                 let mut b1_view = crate::layouts::tests::make_standard_view(&b1);
                 b1_view.h_align = Start;
-                b1_view.h_flex = Flex::Resize;
-                b1_view.v_flex = Flex::Resize;
+                b1_view.h_flex = Flex::Grow;
+                b1_view.v_flex = Flex::Grow;
                 b1_view.title = "b11".into();
                 b1_view.layout = Some(layout_std_panel);
                 scene.add_view_to_parent(b1_view, &tab2);
@@ -227,8 +215,8 @@ mod tests {
             {
                 let mut b2_view = crate::layouts::tests::make_standard_view(&b2);
                 b2_view.h_align = End;
-                b2_view.h_flex = Flex::Intrinsic;
-                b2_view.v_flex = Flex::Intrinsic;
+                b2_view.h_flex = Flex::Shrink;
+                b2_view.v_flex = Flex::Shrink;
                 b2_view.title = "b11".into();
                 b2_view.layout = Some(crate::layouts::tests::layout_button);
                 scene.add_view_to_parent(b2_view, &tab2);
@@ -238,10 +226,7 @@ mod tests {
         // third tab panel lets children be absolutely positioned and sizes self to the center with a fixed width and height of 100
         let tab3: ViewId = "tab3".into();
         {
-            let mut view = crate::layouts::tests::make_standard_view(&tab3);
-            view.h_flex = Flex::Resize;
-            view.v_flex = Flex::Resize;
-            view.layout = Some(layout_std_panel);
+            let view = make_panel(&tab3).with_flex(Grow, Grow);
             scene.add_view_to_parent(view, &tabbed_panel);
         }
 
@@ -257,23 +242,19 @@ mod tests {
         );
         assert_eq!(
             scene.get_view_bounds(&tabbed_panel),
-            Some(Bounds::new(0, 0, 200, 200))
-        );
-        assert_eq!(
-            scene.get_view_bounds(&tabs),
-            Some(Bounds::new(0, 0, 200, 20))
+            Some(Bounds::new(10, 10, 200, 200))
         );
         assert_eq!(
             scene.get_view_bounds(&tab1),
-            Some(Bounds::new(0, 20, 200, 180))
+            Some(Bounds::new(1, 20, 198, 179))
         );
         assert_eq!(
             scene.get_view_bounds(&tab2),
-            Some(Bounds::new(0, 20, 200, 180))
+            Some(Bounds::new(1, 20, 198, 179))
         );
         assert_eq!(
             scene.get_view_bounds(&tab3),
-            Some(Bounds::new(0, 20, 200, 180))
+            Some(Bounds::new(1, 20, 100, 100))
         );
 
         assert_eq!(
@@ -282,11 +263,11 @@ mod tests {
         );
         assert_eq!(
             scene.get_view_bounds(&"tab2_button1".into()),
-            Some(Bounds::new(0, 0, 200, 170))
+            Some(Bounds::new(0, 0, 100, 100))
         );
         assert_eq!(
             scene.get_view_bounds(&"tab2_button2".into()),
-            Some(Bounds::new(170, 170, 30, 10))
+            Some(Bounds::new(168, 100, 30, 10))
         );
     }
 }

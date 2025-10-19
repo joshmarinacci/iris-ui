@@ -3,15 +3,13 @@ use embedded_graphics::mono_font::ascii::FONT_7X13_BOLD;
 use embedded_graphics::mono_font::iso_8859_9::FONT_7X13;
 use embedded_graphics::pixelcolor::{Rgb565, WebColors};
 use embedded_graphics::prelude::RgbColor;
-use embedded_graphics_simulator::{
-    OutputSettingsBuilder, SimulatorDisplay, Window,
-};
+use embedded_graphics_simulator::{OutputSettingsBuilder, SimulatorDisplay, Window};
 use env_logger::Target;
 use iris_ui::device::EmbeddedDrawingContext;
 use iris_ui::geom::{Bounds, Size};
-use iris_ui::scene::{draw_scene, layout_scene, Scene};
+use iris_ui::scene::{Scene, draw_scene, layout_scene};
 use iris_ui::view::{View, ViewId};
-use iris_ui::Theme;
+use iris_ui::{Theme, ViewStyle};
 use log::LevelFilter;
 use std::thread::sleep;
 use std::time::Duration;
@@ -41,15 +39,15 @@ fn make_progress_bar(name: &ViewId) -> View {
 
         // draw progress bar
         draw: Some(|e| {
-            e.ctx.fill_rect(&e.view.bounds, &e.theme.bg);
+            e.ctx.fill_rect(&e.view.bounds, &e.theme.standard.fill);
             let full = e.view.bounds.size;
             // get the state to calculate the fill width
             if let Some(state) = e.view.get_state::<ProgressState>() {
                 let w = (full.w as f32 * state.value) as i32;
                 let bd2 = Bounds::new_from(e.view.bounds.position, Size::new(w, full.h));
-                e.ctx.fill_rect(&bd2, &e.theme.selected_bg);
+                e.ctx.fill_rect(&bd2, &e.theme.accented.fill);
             }
-            e.ctx.stroke_rect(&e.view.bounds, &e.theme.fg);
+            e.ctx.stroke_rect(&e.view.bounds, &e.theme.standard.text);
         }),
 
         ..Default::default()
@@ -69,15 +67,25 @@ fn main() -> Result<(), std::convert::Infallible> {
     let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
     scene.add_view_to_root(make_progress_bar(&progress_id));
 
-    // let mut scene = make_vbox_test();
-    let mut theme = Theme {
-        bg: Rgb565::WHITE,
-        fg: Rgb565::BLACK,
-        selected_bg: Rgb565::BLUE,
-        selected_fg: Rgb565::WHITE,
-        panel_bg: Rgb565::CSS_LIGHT_GRAY,
+    let theme = Theme {
         font: FONT_7X13,
         bold_font: FONT_7X13_BOLD,
+        standard: ViewStyle {
+            fill: Rgb565::WHITE,
+            text: Rgb565::BLACK,
+        },
+        selected: ViewStyle {
+            fill: Rgb565::BLUE,
+            text: Rgb565::WHITE,
+        },
+        accented: ViewStyle {
+            fill: Rgb565::BLUE,
+            text: Rgb565::WHITE,
+        },
+        panel: ViewStyle {
+            fill: Rgb565::CSS_LIGHT_GRAY,
+            text: Rgb565::BLACK,
+        },
     };
 
     let output_settings = OutputSettingsBuilder::new().scale(2).build();

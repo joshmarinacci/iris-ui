@@ -4,11 +4,13 @@ extern crate alloc;
 extern crate core;
 
 use crate::geom::Size;
+use crate::input::{InputEvent, OutputAction};
 use crate::scene::Scene;
 use crate::view::ViewId;
 use alloc::string::String;
 use embedded_graphics::mono_font::MonoFont;
-use embedded_graphics::pixelcolor::Rgb565;
+use embedded_graphics::mono_font::ascii::{FONT_7X13, FONT_7X13_BOLD};
+use embedded_graphics::pixelcolor::{Rgb565, RgbColor};
 use geom::{Bounds, Point};
 use gfx::DrawingContext;
 use view::View;
@@ -18,6 +20,7 @@ pub mod device;
 pub mod geom;
 pub mod gfx;
 pub mod grid;
+pub mod input;
 pub mod label;
 pub mod layouts;
 pub mod list_view;
@@ -39,54 +42,34 @@ pub struct DrawEvent<'a> {
     pub bounds: &'a Bounds,
 }
 
-#[derive(Debug, Clone)]
-pub enum Action {
-    Generic,
-    Command(String),
-}
 pub type DrawFn = fn(event: &mut DrawEvent);
 pub type LayoutFn = fn(layout: &mut LayoutEvent);
-pub type InputFn = fn(event: &mut GuiEvent) -> Option<Action>;
+pub type InputFn = fn(event: &mut GuiEvent) -> Option<OutputAction>;
 
 #[derive(Debug)]
 pub struct Theme {
-    pub bg: Rgb565,
-    pub fg: Rgb565,
-    pub panel_bg: Rgb565,
-    pub selected_bg: Rgb565,
-    pub selected_fg: Rgb565,
     pub font: MonoFont<'static>,
     pub bold_font: MonoFont<'static>,
+    pub standard: ViewStyle,
+    pub accented: ViewStyle,
+    pub selected: ViewStyle,
+    pub panel: ViewStyle,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ViewStyle {
+    pub fill: Rgb565,
+    pub text: Rgb565,
 }
 
 pub type Callback = fn(event: &mut GuiEvent);
 
-#[derive(Debug, Clone)]
-pub enum KeyboardAction {
-    Left,
-    Right,
-    Up,
-    Down,
-    Backspace,
-    Return,
-    Delete,
-}
-#[derive(Debug, Clone)]
-pub enum EventType {
-    Generic,
-    Unknown,
-    Tap(Point),
-    Scroll(i32, i32),
-    Keyboard(u8),
-    KeyboardAction(KeyboardAction),
-    Action(),
-}
 #[derive(Debug)]
 pub struct GuiEvent<'a> {
     pub scene: &'a mut Scene,
     pub target: &'a ViewId,
-    pub event_type: EventType,
-    pub action: Option<Action>,
+    pub event_type: InputEvent,
+    pub action: Option<OutputAction>,
 }
 
 #[derive(Debug)]
@@ -119,11 +102,33 @@ impl<'a> LayoutEvent<'a> {
     }
 }
 
+pub const BW_THEME: Theme = Theme {
+    standard: ViewStyle {
+        fill: Rgb565::WHITE,
+        text: Rgb565::BLACK,
+    },
+    panel: ViewStyle {
+        fill: Rgb565::WHITE,
+        text: Rgb565::BLACK,
+    },
+    selected: ViewStyle {
+        fill: Rgb565::BLACK,
+        text: Rgb565::WHITE,
+    },
+    accented: ViewStyle {
+        fill: Rgb565::BLACK,
+        text: Rgb565::WHITE,
+    },
+    font: FONT_7X13,
+    bold_font: FONT_7X13_BOLD,
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::button::make_button;
     use crate::gfx::TextStyle;
+    use crate::input::TextAction;
     use crate::scene::{click_at, draw_scene, event_at_focused, pick_at};
     use crate::test::MockDrawingContext;
     use crate::view::Align;
@@ -143,7 +148,7 @@ mod tests {
             title: name.to_string(),
             bounds: Bounds::new(0, 0, 10, 10),
             visible: true,
-            draw: Some(|e| e.ctx.fill_rect(&e.view.bounds, &e.theme.bg)),
+            draw: Some(|e| e.ctx.fill_rect(&e.view.bounds, &e.theme.standard.fill)),
             input: None,
             state: None,
             layout: None,
@@ -172,7 +177,7 @@ mod tests {
             bounds,
             visible: true,
             draw: Some(|e| {
-                e.ctx.fill_rect(&e.view.bounds, &e.theme.panel_bg);
+                e.ctx.fill_rect(&e.view.bounds, &e.theme.panel.fill);
             }),
             input: None,
             state: None,
@@ -226,12 +231,15 @@ mod tests {
             layout: None,
             input: Some(|e| {
                 match e.event_type {
-                    EventType::Keyboard(key) => {
-                        info!("got a keyboard event {}", key);
-                        if let Some(view) = e.scene.get_view_mut(e.target) {
-                            view.title.push(key as char)
+                    InputEvent::Text(act) => match act {
+                        TextAction::TypedAscii(key) => {
+                            info!("got a keyboard event {}", key);
+                            if let Some(view) = e.scene.get_view_mut(e.target) {
+                                view.title.push(key as char)
+                            }
                         }
-                    }
+                        _ => {}
+                    },
                     _ => info!("ignoring other event"),
                 };
                 None
@@ -243,7 +251,7 @@ mod tests {
         e.ctx.fill_text(
             &e.view.bounds,
             &e.view.title,
-            &TextStyle::new(&e.theme.font, &e.theme.fg),
+            &TextStyle::new(&e.theme.font, &e.theme.standard.text),
         );
     }
     fn make_label(name: &ViewId) -> View {
@@ -372,7 +380,7 @@ mod tests {
         click_at(&mut scene, &handlers, Point::new(5, 5));
         assert_eq!(scene.get_view(&"root".into()).unwrap().visible, false);
     }
-    fn handle_toggle_button_input(event: &mut GuiEvent) -> Option<Action> {
+    fn handle_toggle_button_input(event: &mut GuiEvent) -> Option<OutputAction> {
         // info!("view clicked {:?}", event.event_type);
         if let Some(view) = event.scene.get_view_mut(event.target) {
             view.state.insert(Box::new(String::from("enabled")));
@@ -392,15 +400,15 @@ mod tests {
                 if let Some(state) = &e.view.state {
                     if let Some(state) = state.downcast_ref::<String>() {
                         if state == "enabled" {
-                            e.ctx.fill_rect(&e.view.bounds, &e.theme.fg);
-                            e.ctx.stroke_rect(&e.view.bounds, &e.theme.bg);
-                            let style = TextStyle::new(&e.theme.font, &e.theme.bg)
+                            e.ctx.fill_rect(&e.view.bounds, &e.theme.standard.text);
+                            e.ctx.stroke_rect(&e.view.bounds, &e.theme.standard.fill);
+                            let style = TextStyle::new(&e.theme.font, &e.theme.standard.fill)
                                 .with_halign(Align::Center);
                             e.ctx.fill_text(&e.view.bounds, &e.view.title, &style);
                         } else {
-                            e.ctx.fill_rect(&e.view.bounds, &e.theme.bg);
-                            e.ctx.stroke_rect(&e.view.bounds, &e.theme.fg);
-                            let style = TextStyle::new(&e.theme.font, &e.theme.fg)
+                            e.ctx.fill_rect(&e.view.bounds, &e.theme.standard.fill);
+                            e.ctx.stroke_rect(&e.view.bounds, &e.theme.standard.text);
+                            let style = TextStyle::new(&e.theme.font, &e.theme.standard.text)
                                 .with_halign(Align::Center);
                             e.ctx.fill_text(&e.view.bounds, &e.view.title, &style);
                         }
@@ -508,7 +516,7 @@ mod tests {
         scene.focused = Some("textbox1".into());
 
         // send keyboard event
-        event_at_focused(&mut scene, &EventType::Keyboard(b'X'));
+        event_at_focused(&mut scene, &InputEvent::Text(TextAction::TypedAscii(b'X')));
         // confirm text is updated
         assert_eq!(get_view_title(&scene, ViewId::new("textbox1")), "fooX");
     }
@@ -522,9 +530,9 @@ mod tests {
             bounds: Bounds::new(0, 0, 10, 10),
             visible: true,
             draw: Some(|e| {
-                let mut color = &e.theme.fg;
+                let mut color = &e.theme.standard.text;
                 if e.focused.is_some() && e.view.name.eq(e.focused.as_ref().unwrap()) {
-                    color = &e.theme.bg;
+                    color = &e.theme.standard.fill;
                 }
                 e.ctx.fill_rect(&e.view.bounds, color);
             }),

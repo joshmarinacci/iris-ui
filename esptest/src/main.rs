@@ -7,10 +7,7 @@
 )]
 
 extern crate alloc;
-use alloc::boxed::Box;
-use alloc::string::String;
 use alloc::vec;
-use alloc::vec::Vec;
 use embedded_hal_bus::spi::ExclusiveDevice;
 use esp_hal::clock::CpuClock;
 use esp_hal::delay::Delay;
@@ -20,26 +17,15 @@ use esp_hal::spi::master::{Config as SpiConfig, Spi};
 use esp_hal::time::{Duration, Instant, Rate};
 use esp_hal::{main, Blocking};
 use iris_ui::button::make_button;
-use iris_ui::geom::{Bounds, Insets, Point as GPoint, Size as GSize};
-use iris_ui::gfx::TextStyle;
+use iris_ui::geom::{Bounds, Point};
 use iris_ui::label::make_label;
-use iris_ui::scene::pick_at;
 use iris_ui::scene::Scene;
 use iris_ui::scene::{click_at, draw_scene};
 use iris_ui::text_input::make_text_input;
-use iris_ui::view::{Align, Flex, View, ViewId};
-use iris_ui::Action;
-use iris_ui::EventType;
-use iris_ui::GuiEvent;
-use iris_ui::Theme;
+use iris_ui::view::{Flex, View, ViewId};
+use iris_ui::BW_THEME;
 use log::info;
 
-use embedded_graphics::mono_font::ascii::FONT_7X13_BOLD;
-use embedded_graphics::{
-    mono_font::ascii::FONT_6X10,
-    pixelcolor::Rgb565,
-    prelude::*,
-};
 use esp_hal::i2c::master::{BusTimeout, Config as I2CConfig, I2c};
 use mipidsi::interface::SpiInterface;
 use mipidsi::options::{ColorInversion, ColorOrder, Orientation, Rotation};
@@ -120,15 +106,7 @@ fn main() -> ! {
     let mut ctx = EmbeddedDrawingContext::new(&mut display);
     let mut scene = make_gui_scene();
 
-    let theme = Theme {
-        bg: Rgb565::WHITE,
-        fg: Rgb565::BLACK,
-        selected_bg: Rgb565::WHITE,
-        selected_fg: Rgb565::BLACK,
-        panel_bg: Rgb565::CSS_LIGHT_GRAY,
-        font: FONT_6X10,
-        bold_font: FONT_7X13_BOLD,
-    };
+    let theme = BW_THEME;
 
     static I2C: StaticCell<I2c<Blocking>> = StaticCell::new();
 
@@ -152,7 +130,7 @@ fn main() -> ! {
         if let Ok(point) = touch.get_touch(i2c_ref) {
             if let Some(point) = point {
                 // flip because the screen is mounted sideways on the t-deck
-                let pt = GPoint::new(320 - point.y as i32, 240 - point.x as i32);
+                let pt = Point::new(320 - point.y as i32, 240 - point.x as i32);
                 if let Some(result) = click_at(&mut scene, &vec![], pt) {
                     info!("view returned result {result:?}");
                 }
@@ -173,9 +151,8 @@ fn make_gui_scene() -> Scene {
         name: ViewId::new("panel"),
         bounds: Bounds::new(20, 20, 200, 200),
         draw: Some(draw_std_panel),
-        padding: Insets::new_same(5),
-        h_flex: Flex::Resize,
-        v_flex: Flex::Resize,
+        h_flex: Flex::Grow,
+        v_flex: Flex::Grow,
         layout: Some(layout_hbox),
         ..Default::default()
     };
@@ -196,109 +173,7 @@ fn make_gui_scene() -> Scene {
         &panel.name,
     );
 
-    scene.add_view_to_parent(
-        make_menuview(
-            "menuview",
-            vec!["first".into(), "second".into(), "third".into()],
-        )
-            .position_at(100, 30),
-        &panel.name,
-    );
     scene.add_view_to_root(panel);
 
     scene
-}
-
-struct MenuState {
-    data: Vec<String>,
-    selected: usize,
-}
-const VH: i32 = 30;
-fn make_menuview(name: &'static str, data: Vec<String>) -> View {
-    View {
-        name: ViewId::new(name),
-        title: name.into(),
-        bounds: Bounds::new(0, 0, 100, data.len() as i32 * VH),
-        visible: true,
-        draw: Some(|e| {
-            e.ctx.fill_rect(&e.view.bounds, &e.theme.bg);
-            if let Some(state) = &e.view.state {
-                if let Some(state) = state.downcast_ref::<MenuState>() {
-                    info!("menu state is {:?} {}", state.data, state.selected);
-                    for (i, item) in (&state.data).iter().enumerate() {
-                        let b = Bounds {
-                            position: GPoint {
-                                x: e.view.bounds.position.x + 1,
-                                y: e.view.bounds.position.y + (i as i32) * VH + 1,
-                            },
-                            size: GSize {
-                                w: e.view.bounds.size.w - 2,
-                                h: VH,
-                            },
-                        };
-                        if state.selected == i {
-                            e.ctx.fill_rect(&b, &e.theme.fg);
-                            e.ctx.fill_text(
-                                &b,
-                                item.as_str(),
-                                &TextStyle::new(&e.theme.font, &e.theme.bg)
-                                    .with_halign(Align::Center),
-                            );
-                        } else {
-                            e.ctx.fill_rect(&b, &e.theme.bg);
-                            e.ctx.fill_text(
-                                &b,
-                                item.as_str(),
-                                &TextStyle::new(&e.theme.font, &e.theme.fg)
-                                    .with_halign(Align::Center),
-                            );
-                        }
-                    }
-                }
-            }
-            e.ctx.stroke_rect(&e.view.bounds, &e.theme.fg);
-        }),
-        input: Some(|event| {
-            // info!("menu clicked at");
-            match &event.event_type {
-                EventType::Tap(pt) => {
-                    // info!("tapped at {:?}",pt);
-                    event.scene.mark_dirty_view(event.target);
-                    if let Some(view) = event.scene.get_view_mut(event.target) {
-                        // info!("the view is {} at {:?}",view.name, view.bounds);
-                        let name = view.name.clone();
-                        if view.bounds.contains(pt) {
-                            // info!("I was clicked on. index is {}", pt.y/20);
-                            let selected = (pt.y - view.bounds.position.y) / VH;
-                            if let Some(state) = &mut view.state {
-                                if let Some(state) = state.downcast_mut::<MenuState>() {
-                                    if selected >= 0 && selected < state.data.len() as i32 {
-                                        state.selected = selected as usize;
-                                        info!("menu state is {:?}", state.selected);
-                                        event.scene.set_focused(&name);
-                                        return Some(Action::Command("selected".into()));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                _ => {
-                    info!("unknown event type");
-                }
-            }
-            None
-        }),
-        layout: Some(|event| {
-            if let Some(parent) = event.scene.get_view_mut(event.target) {
-                if let Some(state) = &parent.state {
-                    if let Some(state) = state.downcast_ref::<MenuState>() {
-                        parent.bounds.size.h = VH * (state.data.len() as i32);
-                    }
-                }
-            };
-        }),
-        state: Some(Box::new(MenuState { data, selected: 0 })),
-        ..Default::default()
-    }
 }
