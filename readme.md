@@ -295,8 +295,8 @@ fn main() -> ! {
 
 ### 0.2
 
-- [ ] input improvements
-    - [ ] cleanup event types and action command signatures.
+- [x] input improvements
+    - [x] cleanup event types and action command signatures.
     - [x] document how to make your own event & draw loop
 - [x] text input
     - [x] move cursor within text
@@ -309,7 +309,7 @@ fn main() -> ! {
     - [ ] view can define the children it uses
         - [ ] let tab panel define its own children using a toggle group
     - [x] let tab panel switch its own tabs instead of using external handle action
-- [ ] theme accent colors?
+- [x] theme accent colors?
 
 ### 0.3
 
