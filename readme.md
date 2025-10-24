@@ -42,8 +42,7 @@ SDL2. [Install instructions](https://docs.rs/embedded-graphics-simulator/latest/
 
 Run the unit tests with `cargo test --features std`.
 
-The library has not yet been released as a published crate because I still need
-a name and need to fix some bugs.
+Run the examples with `cargo run --examples simulator --features std`
 
 ## Views
 

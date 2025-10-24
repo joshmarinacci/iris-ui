@@ -1,14 +1,14 @@
 use crate::geom::{Bounds, Insets, Point};
-use crate::view::Flex::{Grow, Shrink};
-use crate::view::{Align, View, ViewId};
+use crate::view::{Align, Flex, View, ViewId};
 use crate::{DrawEvent, LayoutEvent};
 use alloc::boxed::Box;
 use alloc::string::ToString;
 use embedded_graphics::pixelcolor::{Rgb565, RgbColor};
 use hashbrown::HashMap;
+use log::info;
 
 pub struct GridLayoutState {
-    pub constraints: HashMap<ViewId, LayoutConstraint>,
+    constraints: HashMap<ViewId, LayoutConstraint>,
     row_count: usize,
     col_count: usize,
     col_width: usize,
@@ -52,17 +52,17 @@ impl GridLayoutState {
     }
     pub fn place_at_row_column_with_spans(
         &mut self,
-        p0: &ViewId,
+        name: &ViewId,
         row: usize,
         col: usize,
-        col_span: usize,
         row_span: usize,
+        col_span: usize,
     ) {
         self.constraints.insert(
-            (p0).clone(),
+            name.clone(),
             LayoutConstraint {
-                row,
                 col,
+                row,
                 col_span,
                 row_span,
             },
@@ -148,22 +148,26 @@ fn layout_grid(pass: &mut LayoutEvent) {
         return;
     };
     // let padding = state.padding.clone();
-    if view.h_flex == Grow {
+    if view.h_flex == Flex::Grow {
         view.bounds.size.w = pass.space.w;
     }
-    if view.h_flex == Shrink {}
-    if view.v_flex == Grow {
+    if view.h_flex == Flex::Shrink {}
+    if view.v_flex == Flex::Grow {
         view.bounds.size.h = pass.space.h;
     }
-    if view.v_flex == Shrink {}
+    if view.v_flex == Flex::Shrink {}
 
     let parent_bounds = view.bounds.clone();
     let kids = pass.scene.get_children_ids(pass.target);
     let space = parent_bounds.size.clone() - padding;
     for kid in kids {
         pass.layout_child(&kid, space);
+        if let Some(view) = pass.scene.get_view(&kid) {
+            info!("kid {kid} is {:?} {:?}", view.h_align, view.h_flex);
+        }
         if let Some(state) = pass.scene.get_view_state::<GridLayoutState>(pass.target) {
             let cell_bounds = if let Some(cons) = &state.constraints.get(&kid) {
+                info!("col span is {}",cons.col_span);
                 let x = (cons.col * state.col_width) as i32 + padding.left;
                 let y = (cons.row * state.row_height) as i32 + padding.top;
                 let w = state.col_width as i32 * cons.col_span as i32;
@@ -183,6 +187,11 @@ fn layout_grid(pass: &mut LayoutEvent) {
                     Align::Center => cell_bounds.y() + (cell_bounds.h() - view.bounds.h()) / 2,
                     Align::End => cell_bounds.y() + cell_bounds.h() - view.bounds.h(),
                 };
+                view.bounds.size.w = match &view.h_flex {
+                    Flex::Grow => cell_bounds.w(),
+                    Flex::Fixed => view.bounds.size.w,
+                    Flex::Shrink => view.bounds.size.w,
+                }
             }
         }
     }
@@ -197,9 +206,9 @@ impl Into<ViewId> for &'static str {
 mod tests {
     use crate::button::make_button;
     use crate::geom::Bounds;
-    use crate::grid::{GridLayoutState, LayoutConstraint, make_grid_panel};
+    use crate::grid::{make_grid_panel, GridLayoutState, LayoutConstraint};
     use crate::label::make_label;
-    use crate::scene::{Scene, draw_scene, layout_scene};
+    use crate::scene::{draw_scene, layout_scene, Scene};
     use crate::test::MockDrawingContext;
     use crate::view::Align::Start;
     use crate::view::ViewId;
