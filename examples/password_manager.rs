@@ -1,16 +1,17 @@
 #[cfg(feature = "std")]
 use embedded_graphics::geometry::{Point as EPoint, Size};
 use embedded_graphics::pixelcolor::Rgb565;
-use iris_ui::geom::{Bounds, Point as GPoint};
+use iris_ui::geom::{Bounds, Insets, Point as GPoint};
 use iris_ui::scene::{click_at, draw_scene, event_at_focused, layout_scene, Scene};
 use iris_ui::{Theme, BW_THEME};
+use std::f32::consts::E;
 
 use embedded_graphics_simulator::sdl2::{Keycode, Mod};
 use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
 use env_logger::Target;
-use iris_ui::button::make_button;
+use iris_ui::button::{make_button, make_full_button};
 use iris_ui::device::EmbeddedDrawingContext;
 use iris_ui::grid::{make_grid_panel, GridLayoutState};
 use iris_ui::input::{InputEvent, InputResult, OutputAction, TextAction};
@@ -18,9 +19,9 @@ use iris_ui::label::{make_header_label, make_label};
 use iris_ui::list_view::make_list_view;
 use iris_ui::panel::make_panel;
 use iris_ui::text_input::make_text_input;
-use iris_ui::view::Align::{End, Start};
-use iris_ui::view::Flex::Grow;
-use iris_ui::view::ViewId;
+use iris_ui::view::Align::{Center, End, Start};
+use iris_ui::view::Flex::{Fixed, Grow};
+use iris_ui::view::{View, ViewId};
 use log::{info, LevelFilter};
 
 struct PasswordEntry {
@@ -34,6 +35,7 @@ const SEARCH_BUTTON: ViewId = ViewId::new("search_button");
 const LIST_BUTTON: ViewId = ViewId::new("list_button");
 const ENTRIES_LIST: ViewId = ViewId::new("entries_list");
 const DETAILS_PANEL: ViewId = ViewId::new("details_panel");
+const ADD_BUTTON: ViewId = ViewId::new("add-button");
 
 fn make_scene() -> Scene {
     let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
@@ -46,6 +48,9 @@ fn make_scene() -> Scene {
     let list_button = make_button(&LIST_BUTTON, "List")
         .position_at(30, 50);
     scene.add_view_to_root(list_button);
+    // button to add a new entry
+    let add_button = make_full_button(&ADD_BUTTON, "Add", "add", false).position_at(30, 50 + 30);
+    scene.add_view_to_root(add_button);
     // list of all entries
 
     let entries = vec![
@@ -74,55 +79,8 @@ fn make_scene() -> Scene {
         .with_bounds(Bounds::new(100, 20, 200, 200));
     scene.add_view_to_root(list);
 
-    let mut panel = make_grid_panel(&DETAILS_PANEL)
-        .with_bounds(Bounds::new(10, 10, 300, 220));
-
-    {
-        let mut grid = GridLayoutState::new_row_column(4, 30, 3, 100);
-        grid.debug = false;
-        grid.border_visible = true;
-
-        let name_label = make_header_label("name_title", "Name").with_h_align(End);
-        grid.place_at_row_column(&name_label.name, 0, 0);
-        scene.add_view_to_parent(name_label, &DETAILS_PANEL);
-
-        let name_value = make_label("name_value", "some name").with_h_align(Start);
-        grid.place_at_row_column_with_spans(&name_value.name, 0, 1, 1, 2);
-        scene.add_view_to_parent(name_value, &DETAILS_PANEL);
-
-
-        let desc_label = make_header_label("desc_title", "Description").with_h_align(End);
-        grid.place_at_row_column(&desc_label.name, 1, 0);
-        scene.add_view_to_parent(desc_label, &DETAILS_PANEL);
-
-        let desc_value = make_label("desc_value", "some desc").with_h_align(Start);
-        grid.place_at_row_column_with_spans(&desc_value.name, 1, 1, 1, 2);
-        scene.add_view_to_parent(desc_value, &DETAILS_PANEL);
-
-        let user_label = make_header_label("user_title", "Username").with_h_align(End);
-        grid.place_at_row_column(&user_label.name, 2, 0);
-        scene.add_view_to_parent(user_label, &DETAILS_PANEL);
-
-        let user_value = make_label("user_value", "some desc").with_h_align(Start);
-        grid.place_at_row_column_with_spans(&user_value.name, 2, 1, 1, 2);
-        scene.add_view_to_parent(user_value, &DETAILS_PANEL);
-
-        let pass_label = make_header_label("pass_title", "Password").with_h_align(End);
-        grid.place_at_row_column(&pass_label.name, 3, 0);
-        scene.add_view_to_parent(pass_label, &DETAILS_PANEL);
-
-        let pass_value = make_text_input("pass_value", "some desc").with_h_align(Start).with_h_flex(Grow);
-        grid.place_at_row_column_with_spans(&pass_value.name, 3, 1, 1, 2);
-        scene.add_view_to_parent(pass_value, &DETAILS_PANEL);
-
-        let close = make_button(&ViewId::new("close"), "Close");
-        grid.place_at_row_column(&close.name, 4, 2);
-        scene.add_view_to_parent(close, &DETAILS_PANEL);
-
-        panel.state = Some(Box::new(grid));
-    }
-
-    scene.add_view_to_root(panel);
+    // let panel = make_entry_edit_panel(entry, &mut scene);
+    // scene.add_view_to_root(panel);
 
 
     // buttons to add new entry
@@ -133,6 +91,74 @@ fn make_scene() -> Scene {
     //mock data for now.
     scene
 }
+
+fn make_entry_edit_panel(entry: PasswordEntry, scene: &mut Scene) -> View {
+    let mut panel = make_grid_panel(&DETAILS_PANEL)
+        .with_bounds(Bounds::new(10, 10, 300, 220));
+
+    {
+        let mut grid = GridLayoutState::new_row_column(5, 40, 3, 93);
+        grid.padding = Insets::new_same(10);
+        grid.debug = false;
+        grid.gap = 5;
+        grid.border_visible = true;
+
+        {
+            let name_label = make_header_label("name_title", "Name").with_h_align(End);
+            grid.place_at_row_column(&name_label.name, 0, 0);
+            scene.add_view_to_parent(name_label, &DETAILS_PANEL);
+
+            let name_value = make_text_input("name_value", entry.name.as_str()).with_h_align(Start).with_h_flex(Grow);
+            grid.place_at_row_column_with_spans(&name_value.name, 0, 1, 1, 2);
+            scene.add_view_to_parent(name_value, &DETAILS_PANEL);
+        }
+
+        {
+            let desc_label = make_header_label("desc_title", "Description").with_h_align(End);
+            grid.place_at_row_column(&desc_label.name, 1, 0);
+            scene.add_view_to_parent(desc_label, &DETAILS_PANEL);
+
+            let desc_value = make_text_input("desc_value", entry.description.as_str()).with_h_align(Start).with_h_flex(Grow);
+            grid.place_at_row_column_with_spans(&desc_value.name, 1, 1, 1, 2);
+            scene.add_view_to_parent(desc_value, &DETAILS_PANEL);
+        }
+
+        {
+            let user_label = make_header_label("user_title", "Username").with_h_align(End);
+            grid.place_at_row_column(&user_label.name, 2, 0);
+            scene.add_view_to_parent(user_label, &DETAILS_PANEL);
+
+            let user_value = make_text_input("user_value", entry.username.as_str()).with_h_align(Start).with_h_flex(Grow);
+            grid.place_at_row_column_with_spans(&user_value.name, 2, 1, 1, 2);
+            scene.add_view_to_parent(user_value, &DETAILS_PANEL);
+        }
+
+        {
+            let pass_label = make_header_label("pass_title", "Password").with_h_align(End);
+            grid.place_at_row_column(&pass_label.name, 3, 0);
+            scene.add_view_to_parent(pass_label, &DETAILS_PANEL);
+
+            let pass_value = make_text_input("pass_value", entry.password.as_str())
+                .with_h_align(Start).with_h_flex(Grow)
+                .with_v_align(Center)
+                ;
+            grid.place_at_row_column_with_spans(&pass_value.name, 3, 1, 1, 2);
+            scene.add_view_to_parent(pass_value, &DETAILS_PANEL);
+        }
+
+        {
+            let close = make_full_button(&ViewId::new("close"), "Close", "close-panel", false)
+                .with_h_align(Center).with_v_align(Center);
+            grid.place_at_row_column(&close.name, 4, 2);
+            scene.add_view_to_parent(close, &DETAILS_PANEL);
+        }
+
+        panel.state = Some(Box::new(grid));
+    }
+
+    return panel;
+}
+
 fn main() -> Result<(), std::convert::Infallible> {
     env_logger::Builder::new()
         .target(Target::Stdout) // <-- redirects to stdout
@@ -237,6 +263,24 @@ fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme) {
     match &result.action {
         Some(OutputAction::Command(cmd)) => {
             info!("got a command {cmd}");
+            match cmd.as_str() {
+                "add" => {
+                    let entry = PasswordEntry {
+                        name: "Personal Email".into(),
+                        description: "It's really cool".into(),
+                        username: "me@myemail.com".into(),
+                        password: "%^&passw0d".into(),
+                    };
+                    let panel = make_entry_edit_panel(entry, scene);
+                    scene.add_view_to_root(panel);
+                }
+                "close-panel" => {
+                    scene.remove_parent_and_children(&DETAILS_PANEL);
+                }
+                _ => {
+                    info!("unhandled command {cmd}")
+                }
+            }
         }
         _ => {}
     }

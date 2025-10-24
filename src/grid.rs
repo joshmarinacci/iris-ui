@@ -5,7 +5,6 @@ use alloc::boxed::Box;
 use alloc::string::ToString;
 use embedded_graphics::pixelcolor::{Rgb565, RgbColor};
 use hashbrown::HashMap;
-use log::info;
 
 pub struct GridLayoutState {
     constraints: HashMap<ViewId, LayoutConstraint>,
@@ -122,17 +121,25 @@ fn draw_grid(evt: &mut DrawEvent) {
         if state.debug {
             for i in 0..state.col_count + 1 {
                 let x = (i * state.col_width) as i32 + bounds.x() + padding.left;
-                let y = bounds.y() + padding.top;
-                let y2 = bounds.y() + bounds.h() - padding.top * 2;
+                let y = bounds.y();
+                let y2 = bounds.y() + bounds.h();
                 evt.ctx
                     .line(&Point::new(x, y), &Point::new(x, y2), &Rgb565::RED);
+                evt.ctx
+                    .line(&Point::new(x - state.gap, y), &Point::new(x - state.gap, y2), &Rgb565::YELLOW);
+                evt.ctx
+                    .line(&Point::new(x + state.gap, y), &Point::new(x + state.gap, y2), &Rgb565::YELLOW);
             }
             for j in 0..state.row_count + 1 {
                 let y = (j * state.row_height) as i32 + bounds.y() + padding.top;
-                let x = bounds.x() + padding.left;
-                let x2 = bounds.x() + bounds.w() - padding.left * 2;
+                let x = bounds.x();
+                let x2 = bounds.x() + bounds.w();
                 evt.ctx
                     .line(&Point::new(x, y), &Point::new(x2, y), &Rgb565::RED);
+                evt.ctx
+                    .line(&Point::new(x, y - state.gap), &Point::new(x2, y - state.gap), &Rgb565::YELLOW);
+                evt.ctx
+                    .line(&Point::new(x, y + state.gap), &Point::new(x2, y + state.gap), &Rgb565::YELLOW);
             }
         }
     }
@@ -162,21 +169,30 @@ fn layout_grid(pass: &mut LayoutEvent) {
     let space = parent_bounds.size.clone() - padding;
     for kid in kids {
         pass.layout_child(&kid, space);
-        if let Some(view) = pass.scene.get_view(&kid) {
-            info!("kid {kid} is {:?} {:?}", view.h_align, view.h_flex);
-        }
         if let Some(state) = pass.scene.get_view_state::<GridLayoutState>(pass.target) {
+            let gap = state.gap;
             let cell_bounds = if let Some(cons) = &state.constraints.get(&kid) {
-                info!("col span is {}",cons.col_span);
-                let x = (cons.col * state.col_width) as i32 + padding.left;
-                let y = (cons.row * state.row_height) as i32 + padding.top;
-                let w = state.col_width as i32 * cons.col_span as i32;
-                let h = state.row_height as i32 * cons.row_span as i32;
+                let x = (cons.col * state.col_width) as i32 + padding.left + gap;
+                let y = (cons.row * state.row_height) as i32 + padding.top + gap;
+                let w = (cons.col_span * state.col_width) as i32 - gap * 2;
+                let h = (cons.row_span * state.row_height) as i32 - gap * 2;
                 Bounds::new(x, y, w, h)
             } else {
                 Bounds::new(0, 0, 0, 0)
             };
+
+            // pass.layout_child(&kid, space);
             if let Some(view) = pass.scene.get_view_mut(&kid) {
+                view.bounds.size.w = match &view.h_flex {
+                    Flex::Grow => cell_bounds.w(),
+                    Flex::Fixed => view.bounds.size.w,
+                    Flex::Shrink => view.bounds.size.w,
+                };
+                view.bounds.size.h = match &view.v_flex {
+                    Flex::Grow => cell_bounds.h(),
+                    Flex::Fixed => view.bounds.size.h,
+                    Flex::Shrink => view.bounds.size.h,
+                };
                 view.bounds.position.x = match &view.h_align {
                     Align::Start => cell_bounds.x(),
                     Align::Center => cell_bounds.x() + (cell_bounds.w() - view.bounds.w()) / 2,
@@ -187,11 +203,6 @@ fn layout_grid(pass: &mut LayoutEvent) {
                     Align::Center => cell_bounds.y() + (cell_bounds.h() - view.bounds.h()) / 2,
                     Align::End => cell_bounds.y() + cell_bounds.h() - view.bounds.h(),
                 };
-                view.bounds.size.w = match &view.h_flex {
-                    Flex::Grow => cell_bounds.w(),
-                    Flex::Fixed => view.bounds.size.w,
-                    Flex::Shrink => view.bounds.size.w,
-                }
             }
         }
     }
