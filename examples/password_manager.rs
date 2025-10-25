@@ -4,7 +4,6 @@ use embedded_graphics::pixelcolor::Rgb565;
 use iris_ui::geom::{Bounds, Insets, Point as GPoint};
 use iris_ui::scene::{click_at, draw_scene, event_at_focused, layout_scene, Scene};
 use iris_ui::{Theme, BW_THEME};
-use std::f32::consts::E;
 
 use embedded_graphics_simulator::sdl2::{Keycode, Mod};
 use embedded_graphics_simulator::{
@@ -16,7 +15,7 @@ use iris_ui::device::EmbeddedDrawingContext;
 use iris_ui::grid::{make_grid_panel, GridLayoutState};
 use iris_ui::input::{InputEvent, InputResult, OutputAction, TextAction};
 use iris_ui::label::{make_header_label, make_label};
-use iris_ui::list_view::make_list_view;
+use iris_ui::list_view::{make_generic_list, make_list_view, ListState};
 use iris_ui::panel::make_panel;
 use iris_ui::text_input::make_text_input;
 use iris_ui::view::Align::{Center, End, Start};
@@ -36,6 +35,9 @@ const LIST_BUTTON: ViewId = ViewId::new("list_button");
 const ENTRIES_LIST: ViewId = ViewId::new("entries_list");
 const DETAILS_PANEL: ViewId = ViewId::new("details_panel");
 const ADD_BUTTON: ViewId = ViewId::new("add-button");
+fn renderPasswordEntry(event: &PasswordEntry) -> String {
+    format!("{} {}", event.name, event.username)
+}
 
 fn make_scene() -> Scene {
     let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
@@ -73,10 +75,10 @@ fn make_scene() -> Scene {
             password: "PASSWORD".into(),
         }
     ];
-    let entries = vec!["a", "b", "c"];
 
-    let list = make_list_view(&ENTRIES_LIST, entries, 0)
+    let list = make_generic_list(&ENTRIES_LIST, entries, 0, renderPasswordEntry)
         .with_bounds(Bounds::new(100, 20, 200, 200));
+
     scene.add_view_to_root(list);
 
     // let panel = make_entry_edit_panel(entry, &mut scene);
