@@ -7,7 +7,6 @@ use crate::{DrawEvent, GuiEvent, LayoutEvent};
 use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
-use core::any::Any;
 use core::option::Option::Some;
 use log::info;
 
@@ -33,8 +32,8 @@ pub fn make_generic_list<T: 'static>(name: &ViewId, items: Vec<T>, selected: usi
 
 pub type ItemRenderer<T> = fn(event: &T) -> String;
 pub struct ListState<T> {
-    items: Vec<T>,
-    renderer: ItemRenderer<T>,
+    pub items: Vec<T>,
+    pub renderer: ItemRenderer<T>,
     pub selected: usize,
 }
 

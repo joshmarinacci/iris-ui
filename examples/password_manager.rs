@@ -36,7 +36,7 @@ const ENTRIES_LIST: ViewId = ViewId::new("entries_list");
 const DETAILS_PANEL: ViewId = ViewId::new("details_panel");
 const ADD_BUTTON: ViewId = ViewId::new("add-button");
 fn renderPasswordEntry(event: &PasswordEntry) -> String {
-    format!("{} {}", event.name, event.username)
+    format!("{}: {}", event.name, event.username)
 }
 
 fn make_scene() -> Scene {
