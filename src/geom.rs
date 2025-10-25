@@ -183,7 +183,7 @@ impl Bounds {
 }
 
 impl Bounds {
-    pub(crate) fn contract(&self, i: i32) -> Bounds {
+    pub fn contract(&self, i: i32) -> Bounds {
         Bounds {
             position: Point {
                 x: self.position.x + i,
