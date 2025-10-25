@@ -15,7 +15,7 @@ pub fn make_list_view(name: &ViewId, data: Vec<&str>, selected: usize) -> View {
     let data = data.iter().map(|s| s.to_string()).collect();
     make_generic_list::<String>(name, data, selected, render_string)
 }
-pub fn make_generic_list<T: 'static>(name: &ViewId, items: Vec<T>, selected: usize, renderer: GenericRenderer<T>) -> View {
+pub fn make_generic_list<T: 'static>(name: &ViewId, items: Vec<T>, selected: usize, renderer: ItemRenderer<T>) -> View {
     View {
         name: name.clone(),
         title: name.to_string(),
@@ -31,10 +31,10 @@ pub fn make_generic_list<T: 'static>(name: &ViewId, items: Vec<T>, selected: usi
     }
 }
 
-pub type GenericRenderer<T> = fn(event: &T) -> String;
+pub type ItemRenderer<T> = fn(event: &T) -> String;
 pub struct ListState<T> {
     items: Vec<T>,
-    renderer: GenericRenderer<T>,
+    renderer: ItemRenderer<T>,
     pub selected: usize,
 }
 
