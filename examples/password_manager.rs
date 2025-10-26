@@ -276,10 +276,10 @@ fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme, data
             match cmd.as_str() {
                 "add" => {
                     let entry = PasswordEntry {
-                        name: "Personal Email".into(),
-                        description: "It's really cool".into(),
-                        username: "me@myemail.com".into(),
-                        password: "%^&passw0d".into(),
+                        name: "".into(),
+                        description: "".into(),
+                        username: "".into(),
+                        password: "".into(),
                     };
                     let panel = make_entry_edit_panel(&entry, scene);
                     scene.add_view_to_root(panel);
