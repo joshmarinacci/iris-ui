@@ -4,6 +4,7 @@ use embedded_graphics::pixelcolor::Rgb565;
 use iris_ui::geom::{Bounds, Insets, Point as GPoint};
 use iris_ui::scene::{click_at, draw_scene, event_at_focused, layout_scene, Scene};
 use iris_ui::{Theme, BW_THEME};
+use std::cell::{RefCell, RefMut};
 
 use embedded_graphics_simulator::sdl2::{Keycode, Mod};
 use embedded_graphics_simulator::{
@@ -23,6 +24,7 @@ use iris_ui::view::Flex::{Fixed, Grow};
 use iris_ui::view::{View, ViewId};
 use log::{info, LevelFilter};
 
+#[derive(Debug, Clone)]
 struct PasswordEntry {
     name: String,
     description: String,
@@ -39,7 +41,7 @@ fn renderPasswordEntry(event: &PasswordEntry) -> String {
     format!("{}: {}", event.name, event.username)
 }
 
-fn make_scene() -> Scene {
+fn make_scene(database: &mut Vec<PasswordEntry>) -> Scene {
     let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
 
     // button for search screen
@@ -55,28 +57,9 @@ fn make_scene() -> Scene {
     scene.add_view_to_root(add_button);
     // list of all entries
 
-    let entries = vec![
-        PasswordEntry {
-            name: "email".into(),
-            description: "personal gmail account".into(),
-            username: "me@mydomain.com".into(),
-            password: "some_password".into(),
-        },
-        PasswordEntry {
-            name: "Yahoo".into(),
-            description: "yahoo account".into(),
-            username: "me@mydomain.com".into(),
-            password: "some_password".into(),
-        },
-        PasswordEntry {
-            name: "Home Wifi".into(),
-            description: "".into(),
-            username: "SSID".into(),
-            password: "PASSWORD".into(),
-        }
-    ];
 
-    let list = make_generic_list(&ENTRIES_LIST, entries, 0, renderPasswordEntry)
+    let list = make_generic_list(&ENTRIES_LIST, database.clone(), 0, renderPasswordEntry)
+        .with_v_flex(Grow)
         .with_bounds(Bounds::new(100, 20, 200, 200));
 
     scene.add_view_to_root(list);
@@ -94,7 +77,7 @@ fn make_scene() -> Scene {
     scene
 }
 
-fn make_entry_edit_panel(entry: PasswordEntry, scene: &mut Scene) -> View {
+fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene) -> View {
     let mut panel = make_grid_panel(&DETAILS_PANEL)
         .with_bounds(Bounds::new(10, 10, 300, 220));
 
@@ -169,7 +152,32 @@ fn main() -> Result<(), std::convert::Infallible> {
 
     let mut display: SimulatorDisplay<Rgb565> = SimulatorDisplay::new(Size::new(320, 240));
 
-    let mut scene = make_scene();
+    let mut database: Vec<PasswordEntry> = vec![];
+    database.push(
+        PasswordEntry {
+            name: "email".into(),
+            description: "personal gmail account".into(),
+            username: "me@mydomain.com".into(),
+            password: "some_password".into(),
+        },
+    );
+    database.push(PasswordEntry {
+        name: "Yahoo".into(),
+        description: "yahoo account".into(),
+        username: "me@mydomain.com".into(),
+        password: "some_password".into(),
+    }
+    );
+    database.push(
+        PasswordEntry {
+            name: "Home Wifi".into(),
+            description: "".into(),
+            username: "SSID".into(),
+            password: "PASSWORD".into(),
+        }
+    );
+
+    let mut scene = make_scene(&mut database);
     let mut theme = BW_THEME;
 
     let output_settings = OutputSettingsBuilder::new().scale(2).build();
@@ -197,7 +205,7 @@ fn main() -> Result<(), std::convert::Infallible> {
                     if let Some(result) =
                         click_at(&mut scene, &vec![], GPoint::new(point.x, point.y))
                     {
-                        handle_events(result, &mut scene, &mut theme);
+                        handle_events(result, &mut scene, &mut theme, &mut database);
                     }
                 }
                 SimulatorEvent::MouseButtonDown { mouse_btn, point } => {
@@ -260,7 +268,7 @@ fn keydown_to_char(keycode: Keycode, keymod: Mod) -> TextAction {
     }
 }
 
-fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme) {
+fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme, database: &mut Vec<PasswordEntry>) {
     println!("result of event {:?} from {}", result.input, result.source);
     match &result.action {
         Some(OutputAction::Command(cmd)) => {
@@ -273,7 +281,7 @@ fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme) {
                         username: "me@myemail.com".into(),
                         password: "%^&passw0d".into(),
                     };
-                    let panel = make_entry_edit_panel(entry, scene);
+                    let panel = make_entry_edit_panel(&entry, scene);
                     scene.add_view_to_root(panel);
                 }
                 "close-panel" => {
@@ -283,6 +291,11 @@ fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme) {
                     info!("unhandled command {cmd}")
                 }
             }
+        }
+        Some(OutputAction::Selected(name, index)) => {
+            info!("selected {name} at {index}");
+            let panel = make_entry_edit_panel(&database[*index], scene);
+            scene.add_view_to_root(panel);
         }
         _ => {}
     }

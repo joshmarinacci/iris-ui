@@ -2,6 +2,7 @@ use crate::geom::Bounds;
 use crate::gfx::TextStyle;
 use crate::input::{InputEvent, OutputAction, TextAction};
 use crate::view::Align::Start;
+use crate::view::Flex::{Grow, Shrink};
 use crate::view::{View, ViewId};
 use crate::{DrawEvent, GuiEvent, LayoutEvent};
 use alloc::boxed::Box;
@@ -22,6 +23,7 @@ pub fn make_generic_list<T: 'static>(name: &ViewId, items: Vec<T>, selected: usi
             items,
             renderer,
             selected,
+            cell_height: 10,
         })),
         input: Some(input_list::<T>),
         layout: Some(layout_list::<T>),
@@ -35,6 +37,7 @@ pub struct ListState<T> {
     pub items: Vec<T>,
     pub renderer: ItemRenderer<T>,
     pub selected: usize,
+    pub cell_height: i32,
 }
 
 impl<T> ListState<T> {
@@ -58,13 +61,12 @@ fn input_list<T: 'static>(e: &mut GuiEvent) -> Option<OutputAction> {
             if let Some(view) = e.scene.get_view_mut(e.target) {
                 let bounds = view.bounds;
                 if let Some(state) = view.get_state::<ListState<T>>() {
-                    let cell_height = bounds.h() / (state.items.len() as i32);
                     let y = pt.y - bounds.y();
-                    let n = y / cell_height;
+                    let n = y / (state.cell_height as i32);
                     if n >= 0 && n < state.items.len() as i32 {
                         state.selected = n as usize;
                         let text = (state.renderer)(&state.items[state.selected]);
-                        return Some(OutputAction::Command(text));
+                        return Some(OutputAction::Selected(text, state.selected));
                     }
                 }
             }
@@ -105,7 +107,6 @@ fn draw_list<T: 'static>(e: &mut DrawEvent) {
     e.ctx.fill_rect(&e.view.bounds, &e.theme.standard.fill);
     let name = e.view.name.clone();
     if let Some(state) = e.view.get_state::<ListState<T>>() {
-        let cell_height = bounds.h() / (state.items.len() as i32);
         for (i, item) in state.items.iter().enumerate() {
             let style = if i == state.selected {
                 &e.theme.selected
@@ -114,9 +115,9 @@ fn draw_list<T: 'static>(e: &mut DrawEvent) {
             };
             let bds = Bounds::new(
                 bounds.x(),
-                bounds.y() + (i as i32) * cell_height + 1,
+                bounds.y() + (i as i32) * state.cell_height + 1,
                 bounds.w(),
-                cell_height - 1,
+                state.cell_height - 1,
             );
             // draw background only if selected
             if i == state.selected {
@@ -145,9 +146,16 @@ fn draw_list<T: 'static>(e: &mut DrawEvent) {
 fn layout_list<T: 'static>(e: &mut LayoutEvent) {
     if let Some(state) = e.scene.get_view_state::<ListState<T>>(e.target) {
         let ch = e.theme.font.character_size;
-        let height = state.items.len() as u32 * ch.height * 2;
-        if let Some(view) = e.scene.get_view_mut(e.target) {
-            view.bounds.size.h = height as i32;
+        state.cell_height = (ch.height * 2) as i32;
+    }
+    if let Some(view) = e.scene.get_view_mut(e.target) {
+        if view.v_flex == Shrink {
+            if let Some(state) = e.scene.get_view_state::<ListState<T>>(e.target) {
+                let height = state.items.len() as i32 * state.cell_height;
+                if let Some(view) = e.scene.get_view_mut(e.target) {
+                    view.bounds.size.h = height as i32;
+                }
+            }
         }
     }
 }
