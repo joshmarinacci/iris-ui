@@ -6,16 +6,18 @@ use crate::view::Flex::{Grow, Shrink};
 use crate::view::{View, ViewId};
 use crate::{DrawEvent, GuiEvent, LayoutEvent};
 use alloc::boxed::Box;
+use alloc::rc::Rc;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
+use core::cell::RefCell;
 use core::option::Option::Some;
 use log::info;
 
 pub fn make_list_view(name: &ViewId, data: Vec<&str>, selected: usize) -> View {
     let data = data.iter().map(|s| s.to_string()).collect();
-    make_generic_list::<String>(name, data, selected, render_string)
+    make_generic_list::<String>(name, Rc::new(RefCell::new(data)), selected, render_string)
 }
-pub fn make_generic_list<T: 'static>(name: &ViewId, items: Vec<T>, selected: usize, renderer: ItemRenderer<T>) -> View {
+pub fn make_generic_list<T: 'static>(name: &ViewId, items: Rc<RefCell<Vec<T>>>, selected: usize, renderer: ItemRenderer<T>) -> View {
     View {
         name: name.clone(),
         title: name.to_string(),
@@ -34,7 +36,7 @@ pub fn make_generic_list<T: 'static>(name: &ViewId, items: Vec<T>, selected: usi
 
 pub type ItemRenderer<T> = fn(event: &T) -> String;
 pub struct ListState<T> {
-    pub items: Vec<T>,
+    pub items: Rc<RefCell<Vec<T>>>,
     pub renderer: ItemRenderer<T>,
     pub selected: usize,
     pub cell_height: i32,
@@ -42,7 +44,7 @@ pub struct ListState<T> {
 
 impl<T> ListState<T> {
     pub fn select_next(&mut self) {
-        if self.selected < self.items.len() - 1 {
+        if self.selected < self.items.borrow().len() - 1 {
             self.selected += 1;
         }
     }
@@ -50,6 +52,9 @@ impl<T> ListState<T> {
         if self.selected > 0 {
             self.selected -= 1;
         }
+    }
+    pub fn len(&self) -> usize {
+        self.items.borrow().len()
     }
 }
 
@@ -63,9 +68,9 @@ fn input_list<T: 'static>(e: &mut GuiEvent) -> Option<OutputAction> {
                 if let Some(state) = view.get_state::<ListState<T>>() {
                     let y = pt.y - bounds.y();
                     let n = y / (state.cell_height as i32);
-                    if n >= 0 && n < state.items.len() as i32 {
+                    if n >= 0 && n < state.len() as i32 {
                         state.selected = n as usize;
-                        let text = (state.renderer)(&state.items[state.selected]);
+                        let text = (state.renderer)(&state.items.borrow()[state.selected]);
                         return Some(OutputAction::Selected(text, state.selected));
                     }
                 }
@@ -90,7 +95,7 @@ fn input_list<T: 'static>(e: &mut GuiEvent) -> Option<OutputAction> {
                     TextAction::Down => state.select_next(),
                     TextAction::Enter => {
                         info!("firmly selecting the item");
-                        let text = (state.renderer)(&state.items[state.selected]);
+                        let text = (state.renderer)(&state.items.borrow()[state.selected]);
                         return Some(OutputAction::Command(text));
                     }
                     _ => {}
@@ -107,7 +112,8 @@ fn draw_list<T: 'static>(e: &mut DrawEvent) {
     e.ctx.fill_rect(&e.view.bounds, &e.theme.standard.fill);
     let name = e.view.name.clone();
     if let Some(state) = e.view.get_state::<ListState<T>>() {
-        for (i, item) in state.items.iter().enumerate() {
+        info!("drawing list with length {}", state.len());
+        for (i, item) in state.items.borrow().iter().enumerate() {
             let style = if i == state.selected {
                 &e.theme.selected
             } else {
@@ -151,7 +157,7 @@ fn layout_list<T: 'static>(e: &mut LayoutEvent) {
     if let Some(view) = e.scene.get_view_mut(e.target) {
         if view.v_flex == Shrink {
             if let Some(state) = e.scene.get_view_state::<ListState<T>>(e.target) {
-                let height = state.items.len() as i32 * state.cell_height;
+                let height = state.len() as i32 * state.cell_height;
                 if let Some(view) = e.scene.get_view_mut(e.target) {
                     view.bounds.size.h = height as i32;
                 }

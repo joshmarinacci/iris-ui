@@ -4,8 +4,8 @@ use embedded_graphics::pixelcolor::Rgb565;
 use iris_ui::geom::{Bounds, Insets, Point as GPoint};
 use iris_ui::scene::{click_at, draw_scene, event_at_focused, layout_scene, Scene};
 use iris_ui::{Theme, BW_THEME};
-use std::cell::{RefCell, RefMut};
-
+use std::cell::{RefCell};
+use std::rc::Rc;
 use embedded_graphics_simulator::sdl2::{Keycode, Mod};
 use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
@@ -41,7 +41,7 @@ fn renderPasswordEntry(event: &PasswordEntry) -> String {
     format!("{}: {}", event.name, event.username)
 }
 
-fn make_scene(database: &mut Vec<PasswordEntry>) -> Scene {
+fn make_scene(database: &mut Rc<RefCell<Vec<PasswordEntry>>>) -> Scene {
     let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
 
     // button for search screen
@@ -152,8 +152,8 @@ fn main() -> Result<(), std::convert::Infallible> {
 
     let mut display: SimulatorDisplay<Rgb565> = SimulatorDisplay::new(Size::new(320, 240));
 
-    let mut database: Vec<PasswordEntry> = vec![];
-    database.push(
+    let mut database: Rc<RefCell<Vec<PasswordEntry>>> = Rc::new(RefCell::new(vec![]));
+    database.borrow_mut().push(
         PasswordEntry {
             name: "email".into(),
             description: "personal gmail account".into(),
@@ -161,14 +161,14 @@ fn main() -> Result<(), std::convert::Infallible> {
             password: "some_password".into(),
         },
     );
-    database.push(PasswordEntry {
+    database.borrow_mut().push(PasswordEntry {
         name: "Yahoo".into(),
         description: "yahoo account".into(),
         username: "me@mydomain.com".into(),
         password: "some_password".into(),
     }
     );
-    database.push(
+    database.borrow_mut().push(
         PasswordEntry {
             name: "Home Wifi".into(),
             description: "".into(),
@@ -268,7 +268,7 @@ fn keydown_to_char(keycode: Keycode, keymod: Mod) -> TextAction {
     }
 }
 
-fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme, database: &mut Vec<PasswordEntry>) {
+fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme, database: &mut Rc<RefCell<Vec<PasswordEntry>>>) {
     println!("result of event {:?} from {}", result.input, result.source);
     match &result.action {
         Some(OutputAction::Command(cmd)) => {
@@ -281,8 +281,8 @@ fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme, data
                         username: "".into(),
                         password: "".into(),
                     };
-                    let panel = make_entry_edit_panel(&entry, scene);
-                    scene.add_view_to_root(panel);
+                    database.borrow_mut().push(entry);
+                    scene.mark_layout_dirty();
                 }
                 "close-panel" => {
                     scene.remove_parent_and_children(&DETAILS_PANEL);
@@ -294,7 +294,7 @@ fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme, data
         }
         Some(OutputAction::Selected(name, index)) => {
             info!("selected {name} at {index}");
-            let panel = make_entry_edit_panel(&database[*index], scene);
+            let panel = make_entry_edit_panel(&database.borrow()[*index], scene);
             scene.add_view_to_root(panel);
         }
         _ => {}
