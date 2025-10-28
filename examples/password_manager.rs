@@ -139,6 +139,11 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode:EditMode
 
         match mode {
             EditMode::View => {
+                let edit = make_full_button(&ViewId::new("edit"), "Edit", "edit-entry", false)
+                    .with_h_align(Center).with_v_align(Center);
+                grid.place_at_row_column(&edit.name, 4, 1);
+                scene.add_view_to_parent(edit, &DETAILS_PANEL);
+
                 let close = make_full_button(&ViewId::new("close"), "Close", "close-panel", false)
                     .with_h_align(Center).with_v_align(Center);
                 grid.place_at_row_column(&close.name, 4, 2);
@@ -152,13 +157,22 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode:EditMode
                 scene.add_view_to_parent(cancel, &DETAILS_PANEL);
 
                 // save button
-                let save = make_full_button(&ViewId::new("save"), "Save", "add-entry-save", false)
+                let save = make_full_button(&ViewId::new("save"), "Save", "add-entry-save", true)
                     .with_h_align(Center).with_v_align(Center);
                 grid.place_at_row_column(&save.name, 4, 2);
                 scene.add_view_to_parent(save, &DETAILS_PANEL);
             }
             EditMode::Edit => {
+                let cancel = make_full_button(&ViewId::new("cancel"), "Cancel", "close-panel", false)
+                    .with_h_align(Center).with_v_align(Center);
+                grid.place_at_row_column(&cancel.name, 4, 1);
+                scene.add_view_to_parent(cancel, &DETAILS_PANEL);
 
+                // save button
+                let save = make_full_button(&ViewId::new("save"), "Save", "edit-entry-save", true)
+                    .with_h_align(Center).with_v_align(Center);
+                grid.place_at_row_column(&save.name, 4, 2);
+                scene.add_view_to_parent(save, &DETAILS_PANEL);
             }
             EditMode::Delete => {
 
@@ -342,6 +356,32 @@ fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme, data
                     }
                     scene.remove_parent_and_children(&DETAILS_PANEL);
                     database.borrow_mut().push(entry);
+                }
+                "edit-entry" => {
+                    scene.remove_parent_and_children(&DETAILS_PANEL);
+                    if let Some(state) = scene.get_view_state::<ListState<PasswordEntry>>(&ENTRIES_LIST) {
+                        let item = &database.borrow()[state.selected];
+                        let panel = make_entry_edit_panel(item, scene, EditMode::Edit);
+                        scene.add_view_to_root(panel);
+                    }
+                }
+                "edit-entry-save" => {
+                    if let Some(state) = scene.get_view_state::<ListState<PasswordEntry>>(&ENTRIES_LIST) {
+                        let entry = &mut database.borrow_mut()[state.selected];
+                        if let Some(state) = scene.get_view_state::<TextInputState>(&ViewId::new("name_value")) {
+                            entry.name = state.text.clone();
+                        }
+                        if let Some(state) = scene.get_view_state::<TextInputState>(&ViewId::new("desc_value")) {
+                            entry.description = state.text.clone();
+                        }
+                        if let Some(state) = scene.get_view_state::<TextInputState>(&ViewId::new("user_value")) {
+                            entry.username = state.text.clone();
+                        }
+                        if let Some(state) = scene.get_view_state::<TextInputState>(&ViewId::new("pass_value")) {
+                            entry.password = state.text.clone();
+                        }
+                    }
+                    scene.remove_parent_and_children(&DETAILS_PANEL);
                 }
                 _ => {
                     info!("unhandled command {cmd}")
