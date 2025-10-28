@@ -5,6 +5,7 @@ use iris_ui::geom::{Bounds, Insets, Point as GPoint};
 use iris_ui::scene::{click_at, draw_scene, event_at_focused, layout_scene, Scene};
 use iris_ui::{Theme, BW_THEME};
 use std::cell::{RefCell};
+use std::cmp::PartialEq;
 use std::rc::Rc;
 use embedded_graphics_simulator::sdl2::{Keycode, Mod};
 use embedded_graphics_simulator::{
@@ -18,7 +19,7 @@ use iris_ui::input::{InputEvent, InputResult, OutputAction, TextAction};
 use iris_ui::label::{make_header_label, make_label};
 use iris_ui::list_view::{make_generic_list, make_list_view, ListState};
 use iris_ui::panel::make_panel;
-use iris_ui::text_input::make_text_input;
+use iris_ui::text_input::{make_text_input, TextInputState};
 use iris_ui::view::Align::{Center, End, Start};
 use iris_ui::view::Flex::{Fixed, Grow};
 use iris_ui::view::{View, ViewId};
@@ -77,7 +78,7 @@ fn make_scene(database: &mut Rc<RefCell<Vec<PasswordEntry>>>) -> Scene {
     scene
 }
 
-fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene) -> View {
+fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode:EditMode) -> View {
     let mut panel = make_grid_panel(&DETAILS_PANEL)
         .with_bounds(Bounds::new(10, 10, 300, 220));
 
@@ -88,12 +89,20 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene) -> View {
         grid.gap = 5;
         grid.border_visible = true;
 
+        fn make_label_or_input(mode:EditMode, id:&'static str, value:&String) -> View {
+            if mode == EditMode::View {
+                make_label(id, value)
+            } else {
+                make_text_input(id, value)
+           }.with_h_align(Start).with_h_flex(Grow)
+        }
+
         {
             let name_label = make_header_label("name_title", "Name").with_h_align(End);
             grid.place_at_row_column(&name_label.name, 0, 0);
             scene.add_view_to_parent(name_label, &DETAILS_PANEL);
 
-            let name_value = make_text_input("name_value", entry.name.as_str()).with_h_align(Start).with_h_flex(Grow);
+            let name_value = make_label_or_input(mode, "name_value", &entry.name);
             grid.place_at_row_column_with_spans(&name_value.name, 0, 1, 1, 2);
             scene.add_view_to_parent(name_value, &DETAILS_PANEL);
         }
@@ -103,7 +112,7 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene) -> View {
             grid.place_at_row_column(&desc_label.name, 1, 0);
             scene.add_view_to_parent(desc_label, &DETAILS_PANEL);
 
-            let desc_value = make_text_input("desc_value", entry.description.as_str()).with_h_align(Start).with_h_flex(Grow);
+            let desc_value = make_label_or_input(mode, "desc_value", &entry.description);
             grid.place_at_row_column_with_spans(&desc_value.name, 1, 1, 1, 2);
             scene.add_view_to_parent(desc_value, &DETAILS_PANEL);
         }
@@ -113,7 +122,7 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene) -> View {
             grid.place_at_row_column(&user_label.name, 2, 0);
             scene.add_view_to_parent(user_label, &DETAILS_PANEL);
 
-            let user_value = make_text_input("user_value", entry.username.as_str()).with_h_align(Start).with_h_flex(Grow);
+            let user_value = make_label_or_input(mode, "user_value", &entry.username);
             grid.place_at_row_column_with_spans(&user_value.name, 2, 1, 1, 2);
             scene.add_view_to_parent(user_value, &DETAILS_PANEL);
         }
@@ -123,20 +132,39 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene) -> View {
             grid.place_at_row_column(&pass_label.name, 3, 0);
             scene.add_view_to_parent(pass_label, &DETAILS_PANEL);
 
-            let pass_value = make_text_input("pass_value", entry.password.as_str())
-                .with_h_align(Start).with_h_flex(Grow)
-                .with_v_align(Center)
-                ;
+            let pass_value = make_label_or_input(mode, "pass_value", &entry.password);
             grid.place_at_row_column_with_spans(&pass_value.name, 3, 1, 1, 2);
             scene.add_view_to_parent(pass_value, &DETAILS_PANEL);
         }
 
-        {
-            let close = make_full_button(&ViewId::new("close"), "Close", "close-panel", false)
-                .with_h_align(Center).with_v_align(Center);
-            grid.place_at_row_column(&close.name, 4, 2);
-            scene.add_view_to_parent(close, &DETAILS_PANEL);
+        match mode {
+            EditMode::View => {
+                let close = make_full_button(&ViewId::new("close"), "Close", "close-panel", false)
+                    .with_h_align(Center).with_v_align(Center);
+                grid.place_at_row_column(&close.name, 4, 2);
+                scene.add_view_to_parent(close, &DETAILS_PANEL);
+            }
+            EditMode::Add => {
+                // cancel button
+                let cancel = make_full_button(&ViewId::new("cancel"), "Cancel", "close-panel", false)
+                    .with_h_align(Center).with_v_align(Center);
+                grid.place_at_row_column(&cancel.name, 4, 1);
+                scene.add_view_to_parent(cancel, &DETAILS_PANEL);
+
+                // save button
+                let save = make_full_button(&ViewId::new("save"), "Save", "add-entry-save", false)
+                    .with_h_align(Center).with_v_align(Center);
+                grid.place_at_row_column(&save.name, 4, 2);
+                scene.add_view_to_parent(save, &DETAILS_PANEL);
+            }
+            EditMode::Edit => {
+
+            }
+            EditMode::Delete => {
+
+            }
         }
+
 
         panel.state = Some(Box::new(grid));
     }
@@ -153,8 +181,7 @@ fn main() -> Result<(), std::convert::Infallible> {
     let mut display: SimulatorDisplay<Rgb565> = SimulatorDisplay::new(Size::new(320, 240));
 
     let mut database: Rc<RefCell<Vec<PasswordEntry>>> = Rc::new(RefCell::new(vec![]));
-    database.borrow_mut().push(
-        PasswordEntry {
+    database.borrow_mut().push(PasswordEntry {
             name: "email".into(),
             description: "personal gmail account".into(),
             username: "me@mydomain.com".into(),
@@ -268,6 +295,13 @@ fn keydown_to_char(keycode: Keycode, keymod: Mod) -> TextAction {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum EditMode {
+    View,
+    Add,
+    Edit,
+    Delete,
+}
 fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme, database: &mut Rc<RefCell<Vec<PasswordEntry>>>) {
     println!("result of event {:?} from {}", result.input, result.source);
     match &result.action {
@@ -281,11 +315,33 @@ fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme, data
                         username: "".into(),
                         password: "".into(),
                     };
-                    database.borrow_mut().push(entry);
-                    scene.mark_layout_dirty();
+                    let panel = make_entry_edit_panel(&entry, scene, EditMode::Add);
+                    scene.add_view_to_root(panel);
                 }
                 "close-panel" => {
                     scene.remove_parent_and_children(&DETAILS_PANEL);
+                }
+                "add-entry-save" => {
+                    let mut entry = PasswordEntry {
+                        name: "".into(),
+                        description: "".into(),
+                        username: "".into(),
+                        password: "".into(),
+                    };
+                    if let Some(state) = scene.get_view_state::<TextInputState>(&ViewId::new("name_value")) {
+                        entry.name = state.text.clone();
+                    }
+                    if let Some(state) = scene.get_view_state::<TextInputState>(&ViewId::new("desc_value")) {
+                        entry.description = state.text.clone();
+                    }
+                    if let Some(state) = scene.get_view_state::<TextInputState>(&ViewId::new("user_value")) {
+                        entry.username = state.text.clone();
+                    }
+                    if let Some(state) = scene.get_view_state::<TextInputState>(&ViewId::new("pass_value")) {
+                        entry.password = state.text.clone();
+                    }
+                    scene.remove_parent_and_children(&DETAILS_PANEL);
+                    database.borrow_mut().push(entry);
                 }
                 _ => {
                     info!("unhandled command {cmd}")
@@ -294,7 +350,7 @@ fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme, data
         }
         Some(OutputAction::Selected(name, index)) => {
             info!("selected {name} at {index}");
-            let panel = make_entry_edit_panel(&database.borrow()[*index], scene);
+            let panel = make_entry_edit_panel(&database.borrow()[*index], scene, EditMode::View);
             scene.add_view_to_root(panel);
         }
         _ => {}

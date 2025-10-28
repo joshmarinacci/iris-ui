@@ -9,7 +9,7 @@ use log::info;
 
 pub struct TextInputState {
     cursor: usize,
-    text: String,
+    pub text: String,
 }
 
 impl TextInputState {
