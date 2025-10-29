@@ -7,8 +7,8 @@ use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 
 pub struct ButtonState {
-    command: String,
-    primary: bool,
+    pub command: String,
+    pub primary: bool,
 }
 
 pub fn make_button(name: &ViewId, title: &str) -> View {

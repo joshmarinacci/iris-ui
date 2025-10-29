@@ -58,6 +58,13 @@ impl Scene {
         self.count += 1;
         ViewId::make(format!("view_{}", self.count))
     }
+    pub fn make_view(&mut self) -> View {
+        let id = self.next_view_id();
+        View {
+            name: id,
+            ..Default::default()
+        }
+    }
     /// Set the focused view.
     pub fn set_focused(&mut self, name: &ViewId) {
         if self.focused.is_some() {

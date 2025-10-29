@@ -91,8 +91,8 @@ impl View {
         self.name = name;
         self
     }
-    pub fn with_title(mut self, title: String) -> View {
-        self.title = title;
+    pub fn with_title(mut self, title: &str) -> View {
+        self.title = title.to_string();
         self
     }
     pub fn with_bounds(mut self, bounds: Bounds) -> View {

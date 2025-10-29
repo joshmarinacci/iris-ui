@@ -16,7 +16,7 @@ use iris_ui::button::{make_button, make_full_button};
 use iris_ui::device::EmbeddedDrawingContext;
 use iris_ui::grid::{make_grid_panel, GridLayoutState};
 use iris_ui::input::{InputEvent, InputResult, OutputAction, TextAction};
-use iris_ui::label::{make_header_label, make_label};
+use iris_ui::label::{make_header_label, header_label, make_label};
 use iris_ui::list_view::{make_generic_list, make_list_view, ListState};
 use iris_ui::panel::{draw_std_panel, make_panel, PanelState};
 use iris_ui::text_input::{make_text_input, TextInputState};
@@ -74,7 +74,7 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode:EditMode
         .with_bounds(Bounds::new(10, 10, 300, 220));
 
     {
-        let mut grid = GridLayoutState::new_row_column(5, 40, 3, 93);
+        let mut grid = GridLayoutState::new_row_column(5, 30, 3, 93);
         grid.padding = Insets::new_same(10);
         grid.debug = false;
         grid.gap = 5;
@@ -89,7 +89,7 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode:EditMode
         }
 
         {
-            let name_label = make_header_label("name_title", "Name").with_h_align(End);
+            let name_label = header_label(scene.make_view()).with_title("Name").with_h_align(End);
             grid.place_at_row_column(&name_label.name, 0, 0);
             scene.add_view_to_parent(name_label, &DETAILS_PANEL);
 
@@ -99,7 +99,7 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode:EditMode
         }
 
         {
-            let desc_label = make_header_label("desc_title", "Description").with_h_align(End);
+            let desc_label = header_label(scene.make_view()).with_title("Description").with_h_align(End);
             grid.place_at_row_column(&desc_label.name, 1, 0);
             scene.add_view_to_parent(desc_label, &DETAILS_PANEL);
 
@@ -109,7 +109,7 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode:EditMode
         }
 
         {
-            let user_label = make_header_label("user_title", "Username").with_h_align(End);
+            let user_label = header_label(scene.make_view()).with_title("Username").with_h_align(End);
             grid.place_at_row_column(&user_label.name, 2, 0);
             scene.add_view_to_parent(user_label, &DETAILS_PANEL);
 
@@ -119,7 +119,7 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode:EditMode
         }
 
         {
-            let pass_label = make_header_label("pass_title", "Password").with_h_align(End);
+            let pass_label = header_label(scene.make_view()).with_title("Password").with_h_align(End);
             grid.place_at_row_column(&pass_label.name, 3, 0);
             scene.add_view_to_parent(pass_label, &DETAILS_PANEL);
 
@@ -131,7 +131,8 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode:EditMode
         match mode {
             EditMode::View => {
                 let delete = make_full_button(&ViewId::new("delete"), "Delete", "delete-entry", false)
-                    .with_h_align(Center).with_v_align(Center);
+                    .with_h_align(Center)
+                    .with_v_align(Center);
                 grid.place_at_row_column(&delete.name, 4, 0);
                 scene.add_view_to_parent(delete, &DETAILS_PANEL);
 
