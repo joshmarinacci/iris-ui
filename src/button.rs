@@ -11,6 +11,21 @@ pub struct ButtonState {
     pub primary: bool,
 }
 
+impl ButtonState {
+    pub fn new() -> ButtonState {
+        ButtonState {
+            primary: false,
+            command: "".to_string(),
+        }
+    }
+    pub fn new_command(command: &str) -> ButtonState {
+        ButtonState {
+            primary: false,
+            command: command.to_string(),
+        }
+    }
+}
+
 fn button_layout(e: &mut LayoutEvent) {
     if let Some(view) = e.scene.get_view_mut(&e.target) {
         view.bounds.size = util::calc_size(e.theme.bold_font, &view.title);

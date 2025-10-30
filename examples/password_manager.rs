@@ -46,16 +46,14 @@ fn make_scene(database: &mut Rc<RefCell<Vec<PasswordEntry>>>) -> Scene {
     let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
 
     // button for search screen
-    ViewBuilder::build_with(&mut scene, as_button).with_title("Search").with_position(30,20).add_to_root();
+    ViewBuilder::<ButtonState>::build_with(&mut scene, as_button, ButtonState::new())
+        .mut_state(|state| state.command = "search".to_string())
+        .with_title("Search").with_position(30,20).add_to_root();
     // button for list of all entries
-    ViewBuilder::build_with(&mut scene, as_button).with_title("List").with_position(30, 50).add_to_root();
+    ViewBuilder::build_with(&mut scene, as_button, ButtonState::new_command("list"))
+        .with_title("List").with_position(30, 50).add_to_root();
     // button to add a new entry
-    ViewBuilder::build_with(&mut scene, as_button)
-        .with(|view| {
-            if let Some(state) = view.get_state::<ButtonState>() {
-                state.command = "add".to_string();
-            };
-        })
+    ViewBuilder::build_with(&mut scene, as_button, ButtonState::new_command("add"))
         .with_position(30, 50 + 30)
         .with_title("Add")
         .add_to_root();
@@ -89,7 +87,7 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode: EditMod
         }
 
         {
-            ViewBuilder::build_with(scene, as_header_label)
+            ViewBuilder::build_with(scene, as_header_label, ())
                 .with_title("Name")
                 .with_h_align(End)
                 .with(|view| {
@@ -103,7 +101,7 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode: EditMod
         }
 
         {
-            ViewBuilder::build_with(scene, as_header_label)
+            ViewBuilder::build_with(scene, as_header_label, ())
                 .with_title("Description")
                 .with_h_align(End)
                 .with(|view| {
@@ -117,7 +115,7 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode: EditMod
         }
 
         {
-            ViewBuilder::build_with(scene, as_header_label)
+            ViewBuilder::build_with(scene, as_header_label, ())
                 .with_title("Username")
                 .with_h_align(End)
                 .with(|view| {
@@ -131,7 +129,7 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode: EditMod
         }
 
         {
-            ViewBuilder::build_with(scene, as_header_label)
+            ViewBuilder::build_with(scene, as_header_label, ())
                 .with_title("Password")
                 .with_h_align(End)
                 .with(|view| {
@@ -205,12 +203,13 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode: EditMod
     return panel;
 }
 
-struct ViewBuilder<'a> {
+struct ViewBuilder<'a, S> {
     scene: &'a mut Scene,
     view: View,
+    pub state: Box<S>,
 }
 
-impl<'a> ViewBuilder<'a> {
+impl<'a, S: 'static> ViewBuilder<'a, S> {
     // pub fn build<F: FnMut(&mut View)>(scene: &'_ mut Scene) -> ViewBuilder<'_> {
     //     let view = scene.make_view();
     //     ViewBuilder {
@@ -218,34 +217,40 @@ impl<'a> ViewBuilder<'a> {
     //         view,
     //     }
     // }
-    pub fn build_with<F: FnMut(&mut View)>(scene: &'_ mut Scene, cb: F) -> ViewBuilder<'_> {
+    pub fn build_with<F: FnMut(&mut View)>(scene: &'a mut Scene, cb: F, state:S) -> ViewBuilder<'a, S> {
         let view = scene.make_view();
-        ViewBuilder { scene, view }.with(cb)
+        ViewBuilder { scene, view, state:Box::new(state) }.with(cb)
     }
 
-    pub fn with<F: FnMut(&mut View)>(mut self, mut cb: F) -> ViewBuilder<'a> {
+    pub fn with<F: FnMut(&mut View)>(mut self, mut cb: F) -> ViewBuilder<'a, S> {
         cb(&mut self.view);
         self
     }
-    pub fn with_h_align(mut self, align: Align) -> ViewBuilder<'a> {
+    pub fn with_h_align(mut self, align: Align) -> ViewBuilder<'a, S> {
         self.view.h_align = align;
         self
     }
-    pub fn with_title(mut self, title: &'a str) -> ViewBuilder<'a> {
+    pub fn mut_state<F: FnMut(&mut S)>(mut self, mut cb: F) -> ViewBuilder<'a, S> {
+        cb(&mut self.state);
+        self
+    }
+    pub fn with_title(mut self, title: &'a str) -> ViewBuilder<'a, S> {
         self.view.title = title.into();
         self
     }
-    pub fn with_position(mut self, x: i32, y: i32) -> ViewBuilder<'a> {
+    pub fn with_position(mut self, x: i32, y: i32) -> ViewBuilder<'a, S> {
         self.view.bounds.position.x = x;
         self.view.bounds.position.y = y;
         self
     }
 
-    pub fn add_to_parent(self, parent: &ViewId) -> &'a mut Scene {
+    pub fn add_to_parent(mut self, parent: &ViewId) -> &'a mut Scene {
+        self.view.state = Some(self.state);
         self.scene.add_view_to_parent(self.view, parent);
         self.scene
     }
-    pub fn add_to_root(self) -> &'a mut Scene {
+    pub fn add_to_root(mut self) -> &'a mut Scene {
+        self.view.state = Some(self.state);
         self.scene.add_view_to_root(self.view);
         self.scene
     }
@@ -433,7 +438,7 @@ fn make_option_dialog(
     }
     .position_at(50, 20);
 
-    ViewBuilder::build_with(scene, as_header_label)
+    ViewBuilder::build_with(scene, as_header_label, ())
         .with_title(&text)
         .add_to_parent(&dialog.name);
 
