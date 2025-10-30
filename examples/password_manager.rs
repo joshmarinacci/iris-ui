@@ -57,8 +57,18 @@ fn make_scene(database: &mut Rc<RefCell<Vec<PasswordEntry>>>) -> Scene {
 
     let list = make_generic_list(&ENTRIES_LIST, database.clone(), 0, render_password_entry)
         .with_v_flex(Grow)
-        .with_bounds(Bounds::new(100, 20, 200, 200));
+        .with_bounds(Bounds::new(100, 20, 200, 150));
 
+    build_button(&mut scene, ButtonState::new_command("scroll-up"))
+        .with_title("up")
+        .with_position(120,200)
+        .add_to_root();
+    build_button(&mut scene, ButtonState::new_command("scroll-down"))
+        .with_title("down")
+        .with_position(170,200)
+        .add_to_root();
+
+    scene.set_focused(&list.name);
     scene.add_view_to_root(list);
     scene
 }
@@ -278,6 +288,14 @@ fn main() -> Result<(), std::convert::Infallible> {
         username: "SSID".into(),
         password: "PASSWORD".into(),
     });
+    for i in 1..20 {
+        database.borrow_mut().push(PasswordEntry {
+            name: format!("item {i}"),
+            description: "".into(),
+            username: "".into(),
+            password: "".into(),
+        });
+    }
 
     let mut scene = make_scene(&mut database);
     let mut theme = BW_THEME;
@@ -317,7 +335,6 @@ fn main() -> Result<(), std::convert::Infallible> {
                     scroll_delta,
                     direction,
                 } => {
-                    info!("mouse wheel {scroll_delta:?} {direction:?}");
                     if let Some(result) = event_at_focused(
                         &mut scene,
                         &InputEvent::Scroll(GPoint::new(scroll_delta.x, scroll_delta.y)),
@@ -514,6 +531,7 @@ fn handle_events(
                 }
                 "close-panel" => {
                     scene.remove_parent_and_children(&DETAILS_PANEL);
+                    scene.set_focused(&ENTRIES_LIST);
                 }
                 "add-entry-save" => {
                     let mut entry = PasswordEntry {
@@ -608,6 +626,18 @@ fn handle_events(
                 }
                 "cancel" => {
                     scene.remove_parent_and_children(&DELETE_DIALOG);
+                }
+                "scroll-up" => {
+                    if let Some(state) = scene.get_view_state::<ListState<PasswordEntry>>(&ENTRIES_LIST) {
+                        state.scroll_up();
+                    }
+                    scene.mark_dirty_view(&ENTRIES_LIST);
+                }
+                "scroll-down" => {
+                    if let Some(state) = scene.get_view_state::<ListState<PasswordEntry>>(&ENTRIES_LIST) {
+                        state.scroll_down();
+                    }
+                    scene.mark_dirty_view(&ENTRIES_LIST);
                 }
                 _ => {
                     info!("unhandled command {cmd}")

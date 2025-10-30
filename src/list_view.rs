@@ -1,4 +1,4 @@
-use crate::geom::Bounds;
+use crate::geom::{Bounds, Point, Size};
 use crate::gfx::TextStyle;
 use crate::input::{InputEvent, OutputAction, TextAction};
 use crate::view::Align::Start;
@@ -26,6 +26,8 @@ pub fn make_generic_list<T: 'static>(name: &ViewId, items: Rc<RefCell<Vec<T>>>, 
             renderer,
             selected,
             cell_height: 10,
+            scroll_offset: 0,
+            viewport_height: 0,
         })),
         input: Some(input_list::<T>),
         layout: Some(layout_list::<T>),
@@ -39,22 +41,45 @@ pub struct ListState<T> {
     pub items: Rc<RefCell<Vec<T>>>,
     pub renderer: ItemRenderer<T>,
     pub selected: usize,
-    pub cell_height: i32,
+    pub cell_height: u32,
+    pub scroll_offset: u32,
+    pub viewport_height: u32,
 }
 
 impl<T> ListState<T> {
-    pub fn select_next(&mut self) {
-        if self.selected < self.items.borrow().len() - 1 {
-            self.selected += 1;
-        }
-    }
     pub fn select_prev(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
+            let top = self.selected as u32 * self.cell_height;
+            if top < self.scroll_offset {
+                self.scroll_offset = top;
+            }
+        }
+    }
+    pub fn select_next(&mut self) {
+        if self.selected < self.items.borrow().len() - 1 {
+            self.selected += 1;
+            let top = self.selected as u32 * self.cell_height;
+            let bottom = top + self.cell_height;
+            if bottom > self.viewport_height {
+                self.scroll_offset = bottom - self.viewport_height;
+            }
         }
     }
     pub fn len(&self) -> usize {
         self.items.borrow().len()
+    }
+    pub fn scroll_up(&mut self) {
+        if self.scroll_offset > self.cell_height {
+            self.scroll_offset = self.scroll_offset - self.cell_height;
+        } else {
+            self.scroll_offset = 0;
+        }
+    }
+    pub fn scroll_down(&mut self) {
+        if self.scroll_offset < self.cell_height * self.len() as u32 - 150 {
+            self.scroll_offset = self.scroll_offset + self.cell_height;
+        }
     }
 }
 
@@ -112,7 +137,6 @@ fn draw_list<T: 'static>(e: &mut DrawEvent) {
     e.ctx.fill_rect(&e.view.bounds, &e.theme.standard.fill);
     let name = e.view.name.clone();
     if let Some(state) = e.view.get_state::<ListState<T>>() {
-        info!("drawing list with length {}", state.len());
         for (i, item) in state.items.borrow().iter().enumerate() {
             let style = if i == state.selected {
                 &e.theme.selected
@@ -121,10 +145,14 @@ fn draw_list<T: 'static>(e: &mut DrawEvent) {
             };
             let bds = Bounds::new(
                 bounds.x(),
-                bounds.y() + (i as i32) * state.cell_height + 1,
+                bounds.y() + (i as i32) * (state.cell_height as i32) + 1 - state.scroll_offset as i32,
                 bounds.w(),
-                state.cell_height - 1,
+                (state.cell_height as i32) - 1,
             );
+
+            if !bds.intersects(bounds) {
+                continue;
+            }
             // draw background only if selected
             if i == state.selected {
                 e.ctx.fill_rect(&bds, &style.fill);
@@ -152,16 +180,22 @@ fn draw_list<T: 'static>(e: &mut DrawEvent) {
 fn layout_list<T: 'static>(e: &mut LayoutEvent) {
     if let Some(state) = e.scene.get_view_state::<ListState<T>>(e.target) {
         let ch = e.theme.font.character_size;
-        state.cell_height = (ch.height * 2) as i32;
+        state.cell_height = (ch.height * 2);
     }
     if let Some(view) = e.scene.get_view_mut(e.target) {
         if view.v_flex == Shrink {
             if let Some(state) = e.scene.get_view_state::<ListState<T>>(e.target) {
-                let height = state.len() as i32 * state.cell_height;
+                let height = state.len() * state.cell_height as usize;
                 if let Some(view) = e.scene.get_view_mut(e.target) {
                     view.bounds.size.h = height as i32;
                 }
             }
+        }
+    }
+    if let Some(view) = e.scene.get_view_mut(e.target) {
+        let vh = view.bounds.size.h as u32;
+        if let Some(state) = e.scene.get_view_state::<ListState<T>>(e.target) {
+            state.viewport_height = vh;
         }
     }
 }

@@ -168,6 +168,25 @@ pub struct Bounds {
 }
 
 impl Bounds {
+    pub(crate) fn intersects(&self, b: Bounds) -> bool {
+        if self.x2() < b.x() {
+            return false;
+        }
+        if self.y2() < b.y() {
+            return false;
+        }
+        if self.x() > b.x2() {
+            return false;
+        }
+        if self.y() > b.y2() {
+            return false;
+        }
+
+        true
+    }
+}
+
+impl Bounds {
     pub(crate) fn x(&self) -> i32 {
         self.position.x
     }
@@ -372,6 +391,15 @@ mod tests {
             Bounds::new_from(Point::new(5, 6), Size::new(7, 8)),
             Bounds::new(5, 6, 7, 8)
         );
+    }
+
+    #[test]
+    fn intersects() {
+        let a = Bounds::new(0, 0, 50, 50);
+        let b = Bounds::new(100, 0, 50, 50);
+        let c = Bounds::new(25, 0, 50, 50);
+        assert!(!a.intersects(b));
+        assert!(a.intersects(c));
     }
 
     #[test]
