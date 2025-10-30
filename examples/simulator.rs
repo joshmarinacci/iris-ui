@@ -7,7 +7,7 @@ use embedded_graphics::mono_font::iso_8859_9::FONT_7X13;
 use embedded_graphics::pixelcolor::Rgb565;
 use embedded_graphics::prelude::RgbColor;
 use embedded_graphics::prelude::WebColors;
-use iris_ui::button::{make_button, make_full_button};
+use iris_ui::button::{as_button, make_button, make_full_button, ButtonState};
 use iris_ui::geom::{Bounds, Insets, Point as GPoint};
 use iris_ui::scene::{click_at, draw_scene, event_at_focused, layout_scene, Scene};
 use iris_ui::toggle_button::make_toggle_button;
@@ -24,7 +24,7 @@ use env_logger::Target;
 use iris_ui::device::EmbeddedDrawingContext;
 use iris_ui::grid::{make_grid_panel, GridLayoutState, LayoutConstraint};
 use iris_ui::input::{InputEvent, InputResult, OutputAction, TextAction};
-use iris_ui::label::{make_header_label, make_label};
+use iris_ui::label::{as_header_label, make_header_label, make_label};
 use iris_ui::layouts::{layout_hbox, layout_std_panel, layout_vbox};
 use iris_ui::list_view::make_list_view;
 use iris_ui::panel::{draw_std_panel, make_panel, PanelState};
@@ -35,6 +35,7 @@ use iris_ui::view::Align::{Center, Start};
 use iris_ui::view::Flex::{Fixed, Grow, Shrink};
 use iris_ui::view::{Align, View, ViewId};
 use log::{info, LevelFilter};
+use iris_ui::view_builder::ViewBuilder;
 
 const POPUP_MENU: &'static ViewId = &ViewId::new("popup-menu");
 fn make_scene() -> Scene {
@@ -63,32 +64,32 @@ fn make_scene() -> Scene {
         grid_layout.debug = false;
         grid_layout.border_visible = false;
 
-        let header1 = make_header_label("header1", "Header Label");
-        grid_layout.place_at_row_column(&header1.name, 0, 0);
-        scene.add_view_to_parent(header1, &grid.name);
+        let header1 = ViewBuilder::build_with(&mut scene, as_header_label, ())
+            .with_title("Header Label").add_to_parent(&grid.name);
+        grid_layout.place_at_row_column(&header1, 0, 0);
 
         let label1 = make_label("label1", "A Label");
         grid_layout.place_at_row_column(&label1.name, 0, 1);
         scene.add_view_to_parent(label1, &grid.name);
 
-        let button1 = make_button(&ViewId::new("button1"), "Button");
-        grid_layout.place_at_row_column(&button1.name, 1, 0);
-        scene.add_view_to_parent(button1, &grid.name);
+        let button1 = ViewBuilder::build_with(&mut scene, as_button, ButtonState::new())
+            .with_title("Button").add_to_parent(&grid.name);
+        grid_layout.place_at_row_column(&button1, 1, 0);
 
-        let button3 = make_full_button(&ViewId::new("button3"), "Primary", "primary".into(), true);
-        grid_layout.place_at_row_column(&button3.name, 2, 0);
-        scene.add_view_to_parent(button3, &grid.name);
+        let button3 = ViewBuilder::build_with(&mut scene, as_button, ButtonState::new_primary_command("primary"))
+            .with_title("Primary").add_to_parent(&grid.name);
+        grid_layout.place_at_row_column(&button3, 2, 0);
 
         let toggle1 = make_toggle_button(&ViewId::new("toggle1"), "Toggle");
         grid_layout.place_at_row_column(&toggle1.name, 1, 1);
         scene.add_view_to_parent(toggle1, &grid.name);
 
-        let mut button3 =
+        let toggle_group =
             make_toggle_group(&ViewId::new("toggle2"), vec!["Apple", "Ball", "Car"], 1)
                 .with_h_flex(Shrink)
                 .with_h_align(Center);
-        grid_layout.place_at_row_column_with_spans(&button3.name, 3, 0, 1, 2);
-        scene.add_view_to_parent(button3, &grid.name);
+        grid_layout.place_at_row_column_with_spans(&toggle_group.name, 3, 0, 1, 2);
+        scene.add_view_to_parent(toggle_group, &grid.name);
 
         grid.state = Some(Box::new(grid_layout));
         scene.add_view_to_parent(grid, &tabbed_panel.name);
@@ -100,7 +101,7 @@ fn make_scene() -> Scene {
             .with_visible(false);
 
         {
-            let col1 = make_column("col1").with_v_flex(Grow); //.with_h_flex(Grow);
+            let col1 = make_column("col1").with_v_flex(Grow);
             scene.add_view_to_parent(make_label("vbox-label", "vbox layout"), &col1.name);
             let vbox = make_panel(&ViewId::new("vbox_1")).with_layout(Some(layout_vbox));
             scene.add_view_to_parent(make_button(&ViewId::new("vbox-button1"), "A"), &vbox.name);
@@ -111,7 +112,7 @@ fn make_scene() -> Scene {
         }
 
         {
-            let col2 = make_column("col2").with_v_align(Start); //.with_h_flex(Grow);
+            let col2 = make_column("col2").with_v_align(Start);
             scene.add_view_to_parent(make_label("hbox-label", "hbox layout"), &col2.name);
             let hbox = make_panel(&ViewId::new("hbox_1")).with_layout(Some(layout_hbox));
             scene.add_view_to_parent(make_button(&ViewId::new("hbox-button1"), "A"), &hbox.name);
@@ -124,7 +125,7 @@ fn make_scene() -> Scene {
         scene.add_view_to_parent(wrapper, &tabbed_panel.name);
     }
     {
-        let mut wrapper = make_panel(&LISTS_PANEL)
+        let wrapper = make_panel(&LISTS_PANEL)
             .with_visible(false)
             .with_flex(Grow, Grow)
             .with_state(Some(Box::new(PanelState {
