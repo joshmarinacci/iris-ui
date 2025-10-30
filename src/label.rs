@@ -55,3 +55,10 @@ pub fn header_label(view:View) -> View {
         .with_layout(Some(layout_header_label))
         .with_draw(Some(draw_header_label))
 }
+
+pub fn as_header_label(view:&mut View) {
+    view.h_flex = Shrink;
+    view.v_flex = Shrink;
+    view.layout = Some(layout_header_label);
+    view.draw = Some(draw_header_label);
+}
