@@ -112,7 +112,7 @@ pub fn make_grid_panel(name: &ViewId) -> View {
 fn draw_grid(evt: &mut DrawEvent) {
     let bounds = evt.view.bounds;
     evt.ctx
-        .fill_rect(&evt.view.bounds, &evt.theme.standard.fill);
+        .fill_rect(&evt.view.bounds, &evt.theme.panel.fill);
     if let Some(state) = evt.view.get_state::<GridLayoutState>() {
         let padding = state.padding;
         if state.border_visible {

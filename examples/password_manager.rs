@@ -12,7 +12,7 @@ use iris_ui::geom::{Bounds, Insets, Point as GPoint, Point};
 use iris_ui::grid::{GridLayoutState, make_grid_panel};
 use iris_ui::input::{InputEvent, InputResult, OutputAction, TextAction};
 use iris_ui::label::{as_header_label, make_label};
-use iris_ui::layouts::{layout_hbox, layout_vbox};
+use iris_ui::layouts::{layout_hbox, layout_vbox, make_vertical_spacer};
 use iris_ui::list_view::{ListState, make_generic_list};
 use iris_ui::panel::{PanelState, draw_std_panel, make_panel};
 use iris_ui::scene::{Scene, click_at, draw_scene, event_at_focused, layout_scene};
@@ -25,6 +25,7 @@ use log::{LevelFilter, info};
 use std::cell::RefCell;
 use std::cmp::PartialEq;
 use std::rc::Rc;
+use iris_ui::view_builder::ViewBuilder;
 
 #[derive(Debug, Clone)]
 struct PasswordEntry {
@@ -206,61 +207,6 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode: EditMod
     return panel;
 }
 
-struct ViewBuilder<'a, S> {
-    scene: &'a mut Scene,
-    view: View,
-    pub state: Box<S>,
-}
-
-impl<'a, S: 'static> ViewBuilder<'a, S> {
-    // pub fn build<F: FnMut(&mut View)>(scene: &'_ mut Scene) -> ViewBuilder<'_> {
-    //     let view = scene.make_view();
-    //     ViewBuilder {
-    //         scene,
-    //         view,
-    //     }
-    // }
-    pub fn build_with<F: FnMut(&mut View)>(scene: &'a mut Scene, cb: F, state:S) -> ViewBuilder<'a, S> {
-        let view = scene.make_view();
-        ViewBuilder { scene, view, state:Box::new(state) }.with(cb)
-    }
-
-    pub fn with<F: FnMut(&mut View)>(mut self, mut cb: F) -> ViewBuilder<'a, S> {
-        cb(&mut self.view);
-        self
-    }
-    pub fn with_h_align(mut self, align: Align) -> ViewBuilder<'a, S> {
-        self.view.h_align = align;
-        self
-    }
-    pub fn mut_state<F: FnMut(&mut S)>(mut self, mut cb: F) -> ViewBuilder<'a, S> {
-        cb(&mut self.state);
-        self
-    }
-    pub fn with_title(mut self, title: &'a str) -> ViewBuilder<'a, S> {
-        self.view.title = title.into();
-        self
-    }
-    pub fn with_position(mut self, x: i32, y: i32) -> ViewBuilder<'a, S> {
-        self.view.bounds.position.x = x;
-        self.view.bounds.position.y = y;
-        self
-    }
-
-    pub fn add_to_parent(mut self, parent: &ViewId) -> ViewId {
-        self.view.state = Some(self.state);
-        let name = self.view.name.clone();
-        self.scene.add_view_to_parent(self.view, parent);
-        name
-    }
-    pub fn add_to_root(mut self) -> ViewId {
-        self.view.state = Some(self.state);
-        let name = self.view.name.clone();
-        self.scene.add_view_to_root(self.view);
-        name
-    }
-}
-
 fn main() -> Result<(), std::convert::Infallible> {
     env_logger::Builder::new()
         .target(Target::Stdout) // <-- redirects to stdout
@@ -436,14 +382,6 @@ fn build_header_label(scene:&mut Scene) -> ViewBuilder<()> {
     ViewBuilder::build_with(scene, as_header_label, ())
 }
 
-fn make_vertical_spacer(height: i32) -> View {
-    let spacer = View {
-        v_flex: Fixed,
-        bounds: Bounds::new(0, 0, 0, 20),
-        ..Default::default()
-    };
-    spacer
-}
 fn make_option_dialog(
     name: &ViewId,
     text: String,

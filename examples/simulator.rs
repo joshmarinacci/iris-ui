@@ -59,11 +59,11 @@ fn make_scene() -> Scene {
 
     {
         let mut grid = make_grid_panel(BUTTONS_PANEL).with_flex(Grow, Grow);
-        let mut grid_layout = GridLayoutState::new_row_column(4, 30, 3, 100);
+        let mut grid_layout = GridLayoutState::new_row_column(4, 30, 2, 100);
         grid_layout.debug = false;
         grid_layout.border_visible = false;
 
-        let header1 = make_header_label("header1", "Header");
+        let header1 = make_header_label("header1", "Header Label");
         grid_layout.place_at_row_column(&header1.name, 0, 0);
         scene.add_view_to_parent(header1, &grid.name);
 
@@ -87,7 +87,7 @@ fn make_scene() -> Scene {
             make_toggle_group(&ViewId::new("toggle2"), vec!["Apple", "Ball", "Car"], 1)
                 .with_h_flex(Shrink)
                 .with_h_align(Center);
-        grid_layout.place_at_row_column_with_spans(&button3.name, 3, 0, 2, 1);
+        grid_layout.place_at_row_column_with_spans(&button3.name, 3, 0, 1, 2);
         scene.add_view_to_parent(button3, &grid.name);
 
         grid.state = Some(Box::new(grid_layout));
@@ -348,13 +348,13 @@ fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme) {
     }
     if result.source.as_str() == "themes-list" {
         match &result.action {
-            Some(OutputAction::Command(cmd)) => {
-                match cmd.as_str() {
-                    "Dark" => copy_theme_colors(theme, &DARK_THEME),
-                    "Light" => copy_theme_colors(theme, &LIGHT_THEME),
-                    "Ice Cream" => copy_theme_colors(theme, &ICE_CREAM_THEME),
-                    "Minty Fresh" => copy_theme_colors(theme, &MINTY_FRESH),
-                    "Amber" => copy_theme_colors(theme, &AMBER),
+            Some(OutputAction::Selected(str, index)) => {
+                match index {
+                    0 => copy_theme_colors(theme, &LIGHT_THEME),
+                    1 => copy_theme_colors(theme, &DARK_THEME),
+                    2 => copy_theme_colors(theme, &ICE_CREAM_THEME),
+                    3 => copy_theme_colors(theme, &MINTY_FRESH),
+                    4 => copy_theme_colors(theme, &AMBER),
                     _ => {}
                 }
                 scene.mark_dirty_all();

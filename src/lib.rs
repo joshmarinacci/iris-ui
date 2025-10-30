@@ -33,6 +33,7 @@ pub mod toggle_button;
 pub mod toggle_group;
 pub mod util;
 pub mod view;
+pub mod view_builder;
 
 pub struct DrawEvent<'a> {
     pub ctx: &'a mut dyn DrawingContext,
@@ -51,9 +52,9 @@ pub struct Theme {
     pub font: MonoFont<'static>,
     pub bold_font: MonoFont<'static>,
     pub standard: ViewStyle,
-    pub accented: ViewStyle,
-    pub selected: ViewStyle,
     pub panel: ViewStyle,
+    pub selected: ViewStyle,
+    pub accented: ViewStyle,
 }
 
 #[derive(Debug, Clone, Copy)]

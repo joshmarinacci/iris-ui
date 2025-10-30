@@ -1,8 +1,8 @@
 use crate::LayoutEvent;
-use crate::geom::Size;
+use crate::geom::{Bounds, Size};
 use crate::panel::PanelState;
 use crate::view::Align::{Center, End, Start};
-use crate::view::Flex;
+use crate::view::{Flex, View};
 use crate::view::Flex::Grow;
 use Flex::{Fixed, Shrink};
 use log::info;
@@ -208,6 +208,15 @@ pub fn layout_std_panel(pass: &mut LayoutEvent) {
     }
     let space = view.bounds.size.clone() - padding;
     pass.layout_all_children(&pass.target.clone(), space);
+}
+
+pub fn make_vertical_spacer(h: i32) -> View {
+    let spacer = View {
+        v_flex: Fixed,
+        bounds: Bounds::new(0, 0, 0, h),
+        ..Default::default()
+    };
+    spacer
 }
 
 #[cfg(test)]
