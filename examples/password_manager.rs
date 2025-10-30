@@ -6,7 +6,7 @@ use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
 use env_logger::Target;
-use iris_ui::button::{ButtonState, as_button, make_button, make_full_button};
+use iris_ui::button::{ButtonState, as_button, make_full_button};
 use iris_ui::device::EmbeddedDrawingContext;
 use iris_ui::geom::{Bounds, Insets, Point as GPoint, Point};
 use iris_ui::grid::{GridLayoutState, make_grid_panel};
@@ -46,17 +46,14 @@ fn make_scene(database: &mut Rc<RefCell<Vec<PasswordEntry>>>) -> Scene {
     let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
 
     // button for search screen
-    ViewBuilder::<ButtonState>::build_with(&mut scene, as_button, ButtonState::new())
-        .mut_state(|state| state.command = "search".to_string())
+    build_button(&mut scene, ButtonState::new_command("search"))
         .with_title("Search").with_position(30,20).add_to_root();
     // button for list of all entries
-    ViewBuilder::build_with(&mut scene, as_button, ButtonState::new_command("list"))
+    build_button(&mut scene, ButtonState::new_command("list"))
         .with_title("List").with_position(30, 50).add_to_root();
     // button to add a new entry
-    ViewBuilder::build_with(&mut scene, as_button, ButtonState::new_command("add"))
-        .with_position(30, 50 + 30)
-        .with_title("Add")
-        .add_to_root();
+    build_button(&mut scene, ButtonState::new_command("add"))
+        .with_position(30, 80).with_title("Add").add_to_root();
 
     let list = make_generic_list(&ENTRIES_LIST, database.clone(), 0, render_password_entry)
         .with_v_flex(Grow)
@@ -101,13 +98,11 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode: EditMod
         }
 
         {
-            ViewBuilder::build_with(scene, as_header_label, ())
+            let name = build_header_label(scene)
                 .with_title("Description")
                 .with_h_align(End)
-                .with(|view| {
-                    grid.place_at_row_column(&view.name, 1, 0);
-                })
                 .add_to_parent(&DETAILS_PANEL);
+            grid.place_at_row_column(&name, 1, 0);
 
             let desc_value = make_label_or_input(mode, "desc_value", &entry.description);
             grid.place_at_row_column_with_spans(&desc_value.name, 1, 1, 1, 2);
@@ -115,13 +110,11 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode: EditMod
         }
 
         {
-            ViewBuilder::build_with(scene, as_header_label, ())
+            let name = build_header_label(scene)
                 .with_title("Username")
                 .with_h_align(End)
-                .with(|view| {
-                    grid.place_at_row_column(&view.name, 2, 0);
-                })
                 .add_to_parent(&DETAILS_PANEL);
+            grid.place_at_row_column(&name, 2, 0);
 
             let user_value = make_label_or_input(mode, "user_value", &entry.username);
             grid.place_at_row_column_with_spans(&user_value.name, 2, 1, 1, 2);
@@ -244,15 +237,17 @@ impl<'a, S: 'static> ViewBuilder<'a, S> {
         self
     }
 
-    pub fn add_to_parent(mut self, parent: &ViewId) -> &'a mut Scene {
+    pub fn add_to_parent(mut self, parent: &ViewId) -> ViewId {
         self.view.state = Some(self.state);
+        let name = self.view.name.clone();
         self.scene.add_view_to_parent(self.view, parent);
-        self.scene
+        name
     }
-    pub fn add_to_root(mut self) -> &'a mut Scene {
+    pub fn add_to_root(mut self) -> ViewId {
         self.view.state = Some(self.state);
+        let name = self.view.name.clone();
         self.scene.add_view_to_root(self.view);
-        self.scene
+        name
     }
 }
 
@@ -394,6 +389,17 @@ enum OptionResponses {
     Yes,
     No,
 }
+impl Into<String> for OptionResponses {
+    fn into(self) -> String {
+        match self {
+            OptionResponses::Delete => "delete".to_string(),
+            OptionResponses::Cancel => "cancel".to_string(),
+            OptionResponses::Save => "save".to_string(),
+            OptionResponses::Yes => "yes".to_string(),
+            OptionResponses::No => "no".to_string(),
+        }
+    }
+}
 impl OptionResponses {
     pub fn to_string(&self) -> &'static str {
         match self {
@@ -404,6 +410,13 @@ impl OptionResponses {
             OptionResponses::No => "no",
         }
     }
+}
+
+fn build_button(scene:&mut Scene, state:ButtonState) -> ViewBuilder<ButtonState> {
+    ViewBuilder::build_with(scene, as_button, state)
+}
+fn build_header_label(scene:&mut Scene) -> ViewBuilder<()> {
+    ViewBuilder::build_with(scene, as_header_label, ())
 }
 
 fn make_vertical_spacer(height: i32) -> View {
@@ -454,36 +467,24 @@ fn make_option_dialog(
 
     match variant {
         OptionDialogChoices::DeleteOrCancel => {
-            let delete = make_full_button(
-                &scene.next_view_id(),
-                "Delete",
-                OptionResponses::Delete.to_string(),
-                false,
-            );
-            scene.add_view_to_parent(delete, &panel.name);
-            let cancel = make_full_button(
-                &scene.next_view_id(),
-                "Cancel",
-                OptionResponses::Cancel.to_string(),
-                true,
-            );
-            scene.add_view_to_parent(cancel, &panel.name);
+            build_button(scene, ButtonState {
+                command: OptionResponses::Delete.into(),
+                primary: false,
+            }).with_title("Delete").add_to_parent(&panel.name);
+            build_button(scene, ButtonState {
+                command: OptionResponses::Cancel.into(),
+                primary: true,
+            }).with_title("Cancel").add_to_parent(&panel.name);
         }
         OptionDialogChoices::YesOrNo => {
-            let yes = make_full_button(
-                &scene.next_view_id(),
-                "Yes",
-                OptionResponses::Yes.to_string(),
-                false,
-            );
-            scene.add_view_to_parent(yes, &panel.name);
-            let no = make_full_button(
-                &scene.next_view_id(),
-                "No",
-                OptionResponses::No.to_string(),
-                true,
-            );
-            scene.add_view_to_parent(no, &panel.name);
+            build_button(scene, ButtonState {
+                command: OptionResponses::Yes.into(),
+                primary: false,
+            }).with_title("Yes").add_to_parent(&panel.name);
+            build_button(scene, ButtonState {
+                command: OptionResponses::No.into(),
+                primary: true,
+            }).with_title("No").add_to_parent(&panel.name);
         }
     }
     scene.add_view_to_parent(panel, &dialog.name);

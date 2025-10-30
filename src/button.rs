@@ -24,6 +24,12 @@ impl ButtonState {
             command: command.to_string(),
         }
     }
+    pub fn new_primary_command(cmd: &str) -> ButtonState {
+        ButtonState {
+            primary: true,
+            command: cmd.to_string(),
+        }
+    }
 }
 
 fn button_layout(e: &mut LayoutEvent) {
