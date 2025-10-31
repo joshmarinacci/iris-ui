@@ -1,30 +1,22 @@
-use embedded_graphics::geometry::{Point as EPoint, Size};
+use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::Rgb565;
 use embedded_graphics_simulator::sdl2::{Keycode, Mod};
 use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
 use env_logger::Target;
-use iris_ui::button::{as_button, make_full_button, ButtonState};
 use iris_ui::device::EmbeddedDrawingContext;
-use iris_ui::geom::{Bounds, Insets, Point as GPoint, Point};
+use iris_ui::geom::Point as GPoint;
 use iris_ui::input::{InputEvent, InputResult, OutputAction, TextAction};
-use iris_ui::label::{as_header_label, make_label};
-use iris_ui::layouts::{layout_hbox, layout_vbox, make_vertical_spacer};
-use iris_ui::list_view::{make_generic_list, ListState};
-use iris_ui::panel::{draw_std_panel, make_panel, PanelState};
+use iris_ui::list_view::ListState;
 use iris_ui::scene::{click_at, draw_scene, event_at_focused, layout_scene, Scene};
-use iris_ui::text_input::{make_text_input, TextInputState};
-use iris_ui::view::Align::{Center, End, Start};
-use iris_ui::view::Flex::{Fixed, Grow, Shrink};
-use iris_ui::view::{Align, View, ViewId};
-use iris_ui::view_builder::ViewBuilder;
+use iris_ui::text_input::TextInputState;
+use iris_ui::view::ViewId;
 use iris_ui::{Theme, BW_THEME};
 use log::{info, LevelFilter};
 use password_manager::option_dialog::OptionDialogChoices;
 use password_manager::{EditMode, PasswordEntry, DELETE_DIALOG, DETAILS_PANEL, ENTRIES_LIST};
 use std::cell::RefCell;
-use std::cmp::PartialEq;
 use std::rc::Rc;
 
 fn main() -> Result<(), std::convert::Infallible> {
@@ -147,7 +139,7 @@ fn keydown_to_char(keycode: Keycode, keymod: Mod) -> TextAction {
         Keycode::SPACE => TextAction::TypedAscii(b' '),
         _ => {
             println!("not supported: {keycode}");
-            return TextAction::Unknown;
+            TextAction::Unknown
         }
     }
 }
