@@ -168,7 +168,6 @@ fn layout_grid(pass: &mut LayoutEvent) {
     let kids = pass.scene.get_children_ids(pass.target);
     let space = parent_bounds.size.clone() - padding;
     for kid in kids {
-        pass.layout_child(&kid, space);
         if let Some(state) = pass.scene.get_view_state::<GridLayoutState>(pass.target) {
             let gap = state.gap;
             let cell_bounds = if let Some(cons) = &state.constraints.get(&kid) {
@@ -180,6 +179,7 @@ fn layout_grid(pass: &mut LayoutEvent) {
             } else {
                 Bounds::new(0, 0, 0, 0)
             };
+            pass.layout_child(&kid, cell_bounds.size);
 
             // pass.layout_child(&kid, space);
             if let Some(view) = pass.scene.get_view_mut(&kid) {

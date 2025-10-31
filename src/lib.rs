@@ -34,6 +34,7 @@ pub mod toggle_group;
 pub mod util;
 pub mod view;
 pub mod view_builder;
+pub mod multiline_label;
 
 pub struct DrawEvent<'a> {
     pub ctx: &'a mut dyn DrawingContext,

@@ -35,6 +35,7 @@ use iris_ui::view::Align::{Center, Start};
 use iris_ui::view::Flex::{Fixed, Grow, Shrink};
 use iris_ui::view::{Align, View, ViewId};
 use log::{info, LevelFilter};
+use iris_ui::multiline_label::make_multi_label;
 use iris_ui::view_builder::ViewBuilder;
 
 const POPUP_MENU: &'static ViewId = &ViewId::new("popup-menu");
@@ -60,8 +61,8 @@ fn make_scene() -> Scene {
 
     {
         let mut grid = make_grid_panel(BUTTONS_PANEL).with_flex(Grow, Grow);
-        let mut grid_layout = GridLayoutState::new_row_column(4, 30, 2, 100);
-        grid_layout.debug = false;
+        let mut grid_layout = GridLayoutState::new_row_column(4, 35, 3, 95);
+        grid_layout.debug = true;
         grid_layout.border_visible = false;
 
         let header1 = ViewBuilder::build_with(&mut scene, as_header_label, ())
@@ -69,26 +70,30 @@ fn make_scene() -> Scene {
         grid_layout.place_at_row_column(&header1, 0, 0);
 
         let label1 = make_label("label1", "A Label");
-        grid_layout.place_at_row_column(&label1.name, 0, 1);
+        grid_layout.place_at_row_column(&label1.name, 1, 0);
         scene.add_view_to_parent(label1, &grid.name);
+
+        let label2 = make_multi_label(&ViewId::new("label2"),"A multi-line label with a lot of text that must wrap.");
+        grid_layout.place_at_row_column_with_spans(&label2.name, 2, 0, 2, 1);
+        scene.add_view_to_parent(label2, &grid.name);
 
         let button1 = ViewBuilder::build_with(&mut scene, as_button, ButtonState::new())
             .with_title("Button").add_to_parent(&grid.name);
-        grid_layout.place_at_row_column(&button1, 1, 0);
+        grid_layout.place_at_row_column(&button1, 0, 1);
 
         let button3 = ViewBuilder::build_with(&mut scene, as_button, ButtonState::new_primary_command("primary"))
             .with_title("Primary").add_to_parent(&grid.name);
-        grid_layout.place_at_row_column(&button3, 2, 0);
+        grid_layout.place_at_row_column(&button3, 1, 1);
 
         let toggle1 = make_toggle_button(&ViewId::new("toggle1"), "Toggle");
-        grid_layout.place_at_row_column(&toggle1.name, 1, 1);
+        grid_layout.place_at_row_column(&toggle1.name, 2, 1);
         scene.add_view_to_parent(toggle1, &grid.name);
 
         let toggle_group =
-            make_toggle_group(&ViewId::new("toggle2"), vec!["Apple", "Ball", "Car"], 1)
+            make_toggle_group(&ViewId::new("toggle2"), vec!["Cool", "Toggle", "Group"], 1)
                 .with_h_flex(Shrink)
                 .with_h_align(Center);
-        grid_layout.place_at_row_column_with_spans(&toggle_group.name, 3, 0, 1, 2);
+        grid_layout.place_at_row_column_with_spans(&toggle_group.name, 3, 1, 1, 2);
         scene.add_view_to_parent(toggle_group, &grid.name);
 
         grid.state = Some(Box::new(grid_layout));

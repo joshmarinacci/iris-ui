@@ -105,14 +105,24 @@ where
         if style.underline {
             text_builder = text_builder.underline();
         }
+        let h_align = match style.halign {
+            Align::Start => Alignment::Left,
+            Align::Center => Alignment::Center,
+            Align::End => Alignment::Right,
+        };
+        let v_align = match style.valign {
+            Align::Start => Baseline::Top,
+            Align::Center => Baseline::Middle,
+            Align::End => Baseline::Bottom,
+        };
         let estyle = text_builder.build();
         let etext = Text {
             position: pt,
             text,
             character_style: estyle,
             text_style: TextStyleBuilder::new()
-                .alignment(Alignment::Center)
-                .baseline(Baseline::Middle)
+                .alignment(h_align)
+                .baseline(v_align)
                 .build(),
         };
         etext.draw(&mut display);

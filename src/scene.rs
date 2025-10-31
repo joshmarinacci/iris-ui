@@ -1,4 +1,4 @@
-use crate::geom::{Bounds, Point};
+use crate::geom::{Bounds, Point, Size};
 use crate::gfx::DrawingContext;
 use crate::input::{InputEvent, InputResult};
 use crate::view::{View, ViewId};
@@ -448,6 +448,13 @@ pub fn layout_scene(scene: &mut Scene, theme: &Theme) {
             layout(&mut pass);
         }
         scene.layout_dirty = false;
+    }
+}
+
+pub(crate) fn layout_view(scene: &mut Scene, theme: &Theme, target: &ViewId, space:Size) {
+    let mut pass = LayoutEvent { target, space, scene, theme, };
+    if let Some(layout) = pass.scene.get_view_layout(&target) {
+        layout(&mut pass);
     }
 }
 
