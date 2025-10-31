@@ -6,7 +6,9 @@ use iris_ui::geom::{Bounds, Insets};
 use iris_ui::grid::{make_grid_panel, GridLayoutState};
 use iris_ui::input::{InputResult, OutputAction};
 use iris_ui::label::{as_header_label, make_label};
+use iris_ui::layouts::layout_vbox;
 use iris_ui::list_view::{make_generic_list, ListState};
+use iris_ui::panel::{draw_std_panel, PanelState};
 use iris_ui::scene::Scene;
 use iris_ui::text_input::{make_text_input, TextInputState};
 use iris_ui::view::Align::{Center, End, Start};
@@ -41,15 +43,41 @@ fn render_password_entry(event: &PasswordEntry) -> String {
 pub fn make_scene(database: &mut Rc<RefCell<Vec<PasswordEntry>>>) -> Scene {
     let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
 
+    let column = ViewBuilder::build_with_state(&mut scene, PanelState {
+        border_visible: false,
+        padding: Insets::empty(),
+        gap: 5,
+    })
+        .with_bounds(Bounds::new(20, 20, 50, 200))
+        .with_draw(draw_std_panel)
+        .with_layout(layout_vbox)
+        .add_to_root();
+
     // button for search screen
     build_button(&mut scene, ButtonState::new_command("search"))
-        .with_title("Search").with_position(30, 20).add_to_root();
+        .with_h_flex(Grow)
+        .with_title("Search")
+        .add_to_parent(&column);
     // button for list of all entries
     build_button(&mut scene, ButtonState::new_command("list"))
-        .with_title("List").with_position(30, 50).add_to_root();
+        .with_title("List")
+        .with_h_flex(Grow)
+        .add_to_parent(&column);
     // button to add a new entry
     build_button(&mut scene, ButtonState::new_command("add"))
-        .with_position(30, 80).with_title("Add").add_to_root();
+        .with_h_flex(Grow)
+        .with_title("Add")
+        .add_to_parent(&column);
+    // load from flash storage
+    build_button(&mut scene, ButtonState::new_command("load-data"))
+        .with_h_flex(Grow)
+        .with_title("Load")
+        .add_to_parent(&column);
+    // save back to flash storage
+    build_button(&mut scene, ButtonState::new_command("store-data"))
+        .with_h_flex(Grow)
+        .with_title("Store")
+        .add_to_parent(&column);
 
     let list = make_generic_list(&ENTRIES_LIST, database.clone(), 0, render_password_entry)
         .with_v_flex(Grow)
@@ -338,13 +366,17 @@ pub fn handle_events(
                     scene.remove_parent_and_children(&DELETE_DIALOG);
                 }
                 "scroll-up" => {
-                    if let Some(state) = scene.get_view_state::<ListState<PasswordEntry>>(&ENTRIES_LIST) {
+                    if let Some(state) =
+                        scene.get_view_state::<ListState<PasswordEntry>>(&ENTRIES_LIST)
+                    {
                         state.scroll_up();
                     }
                     scene.mark_dirty_view(&ENTRIES_LIST);
                 }
                 "scroll-down" => {
-                    if let Some(state) = scene.get_view_state::<ListState<PasswordEntry>>(&ENTRIES_LIST) {
+                    if let Some(state) =
+                        scene.get_view_state::<ListState<PasswordEntry>>(&ENTRIES_LIST)
+                    {
                         state.scroll_down();
                     }
                     scene.mark_dirty_view(&ENTRIES_LIST);

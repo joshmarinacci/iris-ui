@@ -101,6 +101,9 @@ impl Insets {
             right: size,
         }
     }
+    pub fn empty() -> Insets {
+        Insets::new_same(0)
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]

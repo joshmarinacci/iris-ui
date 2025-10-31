@@ -2,7 +2,7 @@ use iris_ui::button::ButtonState;
 use iris_ui::geom::Insets;
 use iris_ui::label::as_header_label;
 use iris_ui::layouts::{layout_hbox, layout_vbox, make_vertical_spacer};
-use iris_ui::panel::{draw_std_panel, make_panel, PanelState};
+use iris_ui::panel::{make_panel, PanelState};
 use iris_ui::scene::Scene;
 use iris_ui::view::Align::Center;
 use iris_ui::view::Flex::Shrink;
@@ -61,7 +61,11 @@ pub fn make_option_dialog(
             padding: Insets::new_same(10),
         })),
         layout: Some(layout_vbox),
-        draw: Some(draw_std_panel),
+        draw: Some(|e| {
+            e.ctx.fill_rect(&e.view.bounds, &e.theme.panel.fill);
+            e.ctx.stroke_rect(&e.view.bounds, &e.theme.panel.text);
+            e.ctx.stroke_rect(&e.view.bounds.contract(1), &e.theme.panel.text);
+        }),
         h_align: Center,
         v_align: Center,
         h_flex: Shrink,
