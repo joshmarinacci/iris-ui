@@ -1,16 +1,20 @@
 pub mod option_dialog;
 
+use crate::option_dialog::OptionDialogChoices;
 use iris_ui::button::{as_button, make_full_button, ButtonState};
 use iris_ui::geom::{Bounds, Insets};
 use iris_ui::grid::{make_grid_panel, GridLayoutState};
+use iris_ui::input::{InputResult, OutputAction};
 use iris_ui::label::{as_header_label, make_label};
-use iris_ui::list_view::make_generic_list;
+use iris_ui::list_view::{make_generic_list, ListState};
 use iris_ui::scene::Scene;
-use iris_ui::text_input::make_text_input;
+use iris_ui::text_input::{make_text_input, TextInputState};
 use iris_ui::view::Align::{Center, End, Start};
 use iris_ui::view::Flex::Grow;
 use iris_ui::view::{View, ViewId};
 use iris_ui::view_builder::ViewBuilder;
+use iris_ui::Theme;
+use log::info;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -214,3 +218,147 @@ fn build_header_label(scene: &mut Scene) -> ViewBuilder<()> {
     ViewBuilder::build_with(scene, as_header_label, ())
 }
 
+pub fn handle_events(
+    result: InputResult,
+    scene: &mut Scene,
+    theme: &mut Theme,
+    database: &mut Rc<RefCell<Vec<PasswordEntry>>>,
+) {
+    println!("result of event {:?} from {}", result.input, result.source);
+    match &result.action {
+        Some(OutputAction::Command(cmd)) => {
+            info!("got a command {cmd} from {}", result.source);
+            match cmd.as_str() {
+                "add" => {
+                    let entry = PasswordEntry {
+                        name: "".into(),
+                        description: "".into(),
+                        username: "".into(),
+                        password: "".into(),
+                    };
+                    let panel = make_entry_edit_panel(&entry, scene, EditMode::Add);
+                    scene.add_view_to_root(panel);
+                }
+                "close-panel" => {
+                    scene.remove_parent_and_children(&DETAILS_PANEL);
+                    scene.set_focused(&ENTRIES_LIST);
+                }
+                "add-entry-save" => {
+                    let mut entry = PasswordEntry {
+                        name: "".into(),
+                        description: "".into(),
+                        username: "".into(),
+                        password: "".into(),
+                    };
+                    if let Some(state) =
+                        scene.get_view_state::<TextInputState>(&ViewId::new("name_value"))
+                    {
+                        entry.name = state.text.clone();
+                    }
+                    if let Some(state) =
+                        scene.get_view_state::<TextInputState>(&ViewId::new("desc_value"))
+                    {
+                        entry.description = state.text.clone();
+                    }
+                    if let Some(state) =
+                        scene.get_view_state::<TextInputState>(&ViewId::new("user_value"))
+                    {
+                        entry.username = state.text.clone();
+                    }
+                    if let Some(state) =
+                        scene.get_view_state::<TextInputState>(&ViewId::new("pass_value"))
+                    {
+                        entry.password = state.text.clone();
+                    }
+                    scene.remove_parent_and_children(&DETAILS_PANEL);
+                    database.borrow_mut().push(entry);
+                }
+                "edit-entry" => {
+                    scene.remove_parent_and_children(&DETAILS_PANEL);
+                    if let Some(state) =
+                        scene.get_view_state::<ListState<PasswordEntry>>(&ENTRIES_LIST)
+                    {
+                        let item = &database.borrow()[state.selected];
+                        let panel = make_entry_edit_panel(item, scene, EditMode::Edit);
+                        scene.add_view_to_root(panel);
+                    }
+                }
+                "edit-entry-save" => {
+                    if let Some(state) =
+                        scene.get_view_state::<ListState<PasswordEntry>>(&ENTRIES_LIST)
+                    {
+                        let entry = &mut database.borrow_mut()[state.selected];
+                        if let Some(state) =
+                            scene.get_view_state::<TextInputState>(&ViewId::new("name_value"))
+                        {
+                            entry.name = state.text.clone();
+                        }
+                        if let Some(state) =
+                            scene.get_view_state::<TextInputState>(&ViewId::new("desc_value"))
+                        {
+                            entry.description = state.text.clone();
+                        }
+                        if let Some(state) =
+                            scene.get_view_state::<TextInputState>(&ViewId::new("user_value"))
+                        {
+                            entry.username = state.text.clone();
+                        }
+                        if let Some(state) =
+                            scene.get_view_state::<TextInputState>(&ViewId::new("pass_value"))
+                        {
+                            entry.password = state.text.clone();
+                        }
+                    }
+                    scene.remove_parent_and_children(&DETAILS_PANEL);
+                }
+                "delete-entry" => {
+                    if let Some(state) =
+                        scene.get_view_state::<ListState<PasswordEntry>>(&ENTRIES_LIST)
+                    {
+                        let entry = &mut database.borrow_mut()[state.selected];
+                        let dialog = crate::option_dialog::make_option_dialog(
+                            &DELETE_DIALOG,
+                            format!("Really delete '{}'?", entry.name),
+                            OptionDialogChoices::DeleteOrCancel,
+                            scene,
+                        );
+                        scene.add_view_to_root(dialog);
+                    }
+                }
+                "delete" => {
+                    if let Some(state) =
+                        scene.get_view_state::<ListState<PasswordEntry>>(&ENTRIES_LIST)
+                    {
+                        let entry = database.borrow_mut().remove(state.selected);
+                        scene.remove_parent_and_children(&DETAILS_PANEL);
+                        scene.remove_parent_and_children(&DELETE_DIALOG);
+                    }
+                }
+                "cancel" => {
+                    scene.remove_parent_and_children(&DELETE_DIALOG);
+                }
+                "scroll-up" => {
+                    if let Some(state) = scene.get_view_state::<ListState<PasswordEntry>>(&ENTRIES_LIST) {
+                        state.scroll_up();
+                    }
+                    scene.mark_dirty_view(&ENTRIES_LIST);
+                }
+                "scroll-down" => {
+                    if let Some(state) = scene.get_view_state::<ListState<PasswordEntry>>(&ENTRIES_LIST) {
+                        state.scroll_down();
+                    }
+                    scene.mark_dirty_view(&ENTRIES_LIST);
+                }
+                _ => {
+                    info!("unhandled command {cmd}")
+                }
+            }
+        }
+        Some(OutputAction::Selected(name, index)) => {
+            info!("selected {name} at {index}");
+            let panel = make_entry_edit_panel(&database.borrow()[*index], scene, EditMode::View);
+            scene.add_view_to_root(panel);
+        }
+        _ => {}
+    }
+}
