@@ -1,4 +1,3 @@
-#[cfg(feature = "std")]
 use embedded_graphics::geometry::{Point as EPoint, Size};
 use embedded_graphics::pixelcolor::Rgb565;
 use embedded_graphics_simulator::sdl2::{Keycode, Mod};
@@ -6,26 +5,26 @@ use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
 use env_logger::Target;
-use iris_ui::button::{ButtonState, as_button, make_full_button};
+use iris_ui::button::{as_button, make_full_button, ButtonState};
 use iris_ui::device::EmbeddedDrawingContext;
 use iris_ui::geom::{Bounds, Insets, Point as GPoint, Point};
-use iris_ui::grid::{GridLayoutState, make_grid_panel};
+use iris_ui::grid::{make_grid_panel, GridLayoutState};
 use iris_ui::input::{InputEvent, InputResult, OutputAction, TextAction};
 use iris_ui::label::{as_header_label, make_label};
 use iris_ui::layouts::{layout_hbox, layout_vbox, make_vertical_spacer};
-use iris_ui::list_view::{ListState, make_generic_list};
-use iris_ui::panel::{PanelState, draw_std_panel, make_panel};
-use iris_ui::scene::{Scene, click_at, draw_scene, event_at_focused, layout_scene};
-use iris_ui::text_input::{TextInputState, make_text_input};
+use iris_ui::list_view::{make_generic_list, ListState};
+use iris_ui::panel::{draw_std_panel, make_panel, PanelState};
+use iris_ui::scene::{click_at, draw_scene, event_at_focused, layout_scene, Scene};
+use iris_ui::text_input::{make_text_input, TextInputState};
 use iris_ui::view::Align::{Center, End, Start};
 use iris_ui::view::Flex::{Fixed, Grow, Shrink};
 use iris_ui::view::{Align, View, ViewId};
-use iris_ui::{BW_THEME, Theme};
-use log::{LevelFilter, info};
+use iris_ui::view_builder::ViewBuilder;
+use iris_ui::{Theme, BW_THEME};
+use log::{info, LevelFilter};
 use std::cell::RefCell;
 use std::cmp::PartialEq;
 use std::rc::Rc;
-use iris_ui::view_builder::ViewBuilder;
 
 #[derive(Debug, Clone)]
 struct PasswordEntry {
@@ -48,7 +47,7 @@ fn make_scene(database: &mut Rc<RefCell<Vec<PasswordEntry>>>) -> Scene {
 
     // button for search screen
     build_button(&mut scene, ButtonState::new_command("search"))
-        .with_title("Search").with_position(30,20).add_to_root();
+        .with_title("Search").with_position(30, 20).add_to_root();
     // button for list of all entries
     build_button(&mut scene, ButtonState::new_command("list"))
         .with_title("List").with_position(30, 50).add_to_root();
@@ -62,11 +61,11 @@ fn make_scene(database: &mut Rc<RefCell<Vec<PasswordEntry>>>) -> Scene {
 
     build_button(&mut scene, ButtonState::new_command("scroll-up"))
         .with_title("up")
-        .with_position(120,200)
+        .with_position(120, 200)
         .add_to_root();
     build_button(&mut scene, ButtonState::new_command("scroll-down"))
         .with_title("down")
-        .with_position(170,200)
+        .with_position(170, 200)
         .add_to_root();
 
     scene.set_focused(&list.name);
@@ -90,8 +89,8 @@ fn make_entry_edit_panel(entry: &PasswordEntry, scene: &mut Scene, mode: EditMod
             } else {
                 make_text_input(id, value)
             }
-            .with_h_align(Start)
-            .with_h_flex(Grow)
+                .with_h_align(Start)
+                .with_h_flex(Grow)
         }
 
         {
@@ -296,7 +295,6 @@ fn main() -> Result<(), std::convert::Infallible> {
 }
 
 fn keydown_to_char(keycode: Keycode, keymod: Mod) -> TextAction {
-    println!("keycode as number {}", keycode.into_i32());
     let ch = keycode.into_i32();
     if ch <= 0 {
         return TextAction::Unknown;
@@ -375,10 +373,10 @@ impl OptionResponses {
     }
 }
 
-fn build_button(scene:&mut Scene, state:ButtonState) -> ViewBuilder<ButtonState> {
+fn build_button(scene: &mut Scene, state: ButtonState) -> ViewBuilder<ButtonState> {
     ViewBuilder::build_with(scene, as_button, state)
 }
-fn build_header_label(scene:&mut Scene) -> ViewBuilder<()> {
+fn build_header_label(scene: &mut Scene) -> ViewBuilder<()> {
     ViewBuilder::build_with(scene, as_header_label, ())
 }
 
@@ -404,7 +402,7 @@ fn make_option_dialog(
         v_flex: Shrink,
         ..Default::default()
     }
-    .position_at(50, 20);
+        .position_at(50, 20);
 
     ViewBuilder::build_with(scene, as_header_label, ())
         .with_title(&text)

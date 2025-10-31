@@ -5,8 +5,12 @@
       <sourceFolder url="file://$MODULE_DIR$/esptest/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/password_manager/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/pm/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/esptest/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
+      <excludeFolder url="file://$MODULE_DIR$/examples/password_manager/target" />
+      <excludeFolder url="file://$MODULE_DIR$/examples/pm/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

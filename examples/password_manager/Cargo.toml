@@ -1,0 +1,11 @@
+[package]
+name = "password_manager"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+log = "0.4.27"
+env_logger = { version = "0.11.8" }
+embedded-graphics = { version = "0.8.1" }
+embedded-graphics-simulator = { version = "0.7.0" }
+iris-ui = { path = "../../" }
