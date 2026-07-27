@@ -38,7 +38,7 @@ use log::{info, LevelFilter};
 
 const POPUP_MENU: &'static ViewId = &ViewId::new("popup-menu");
 fn make_scene() -> Scene {
-    let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
+    let mut scene = Scene::new_with_scale(Bounds::new(0, 0, 320, 240), 2);
     const TABBED_PANEL: &'static ViewId = &ViewId::new("tabbed-panel");
 
     let tab_names = vec!["buttons", "layouts", "lists", "inputs", "themes"];
@@ -220,17 +220,18 @@ fn main() -> Result<(), std::convert::Infallible> {
         .filter(None, LevelFilter::Info)
         .init();
 
-    let mut display: SimulatorDisplay<Rgb565> = SimulatorDisplay::new(Size::new(320, 240));
-
     let mut scene = make_scene();
+    let scale = scene.scale();
+    let mut display: SimulatorDisplay<Rgb565> = SimulatorDisplay::new(Size::new(320 * scale, 240 * scale));
+
     let mut theme = BW_THEME;
     copy_theme_colors(&mut theme, &LIGHT_THEME);
 
     let output_settings = OutputSettingsBuilder::new().scale(2).build();
     let mut window = Window::new("Simulator Test", &output_settings);
     'running: loop {
-        let mut ctx = EmbeddedDrawingContext::new(&mut display);
-        ctx.clip = scene.dirty_rect.clone();
+        let mut ctx = EmbeddedDrawingContext::new_with_scale(&mut display, scale);
+        ctx.clip = scene.dirty_rect.scaled(scale);
         layout_scene(&mut scene, &theme);
         draw_scene(&mut scene, &mut ctx, &theme);
         window.update(&display);
@@ -248,9 +249,8 @@ fn main() -> Result<(), std::convert::Infallible> {
                 }
                 SimulatorEvent::MouseButtonUp { point, .. } => {
                     println!("mouse button up {}", point);
-                    if let Some(result) =
-                        click_at(&mut scene, &vec![], GPoint::new(point.x, point.y))
-                    {
+                    let lpt = GPoint::new(point.x / scale as i32, point.y / scale as i32);
+                    if let Some(result) = click_at(&mut scene, &vec![], lpt) {
                         handle_events(result, &mut scene, &mut theme);
                     }
                 }

@@ -134,6 +134,10 @@ impl Point {
     pub fn zero() -> Point {
         Point::new(0, 0)
     }
+    pub fn scaled(&self, scale: u32) -> Point {
+        let s = scale as i32;
+        Point::new(self.x * s, self.y * s)
+    }
 }
 impl Add<Point> for Point {
     type Output = Point;
@@ -206,6 +210,10 @@ impl Bounds {
     }
     pub fn new_from(position: Point, size: Size) -> Bounds {
         Bounds { position, size }
+    }
+    pub fn scaled(&self, scale: u32) -> Bounds {
+        let s = scale as i32;
+        Bounds::new(self.position.x * s, self.position.y * s, self.size.w * s, self.size.h * s)
     }
 }
 impl Default for Bounds {

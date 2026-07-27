@@ -22,6 +22,7 @@ pub struct Scene {
     root_id: ViewId,
     pub(crate) focused: Option<ViewId>,
     layout_dirty: bool,
+    scale: u32,
 }
 
 impl Scene {
@@ -240,8 +241,23 @@ impl Scene {
             children: HashMap::new(),
             parents: HashMap::new(),
             count: 0,
+            scale: 1,
         }
     }
+
+    /// Create a new scene with the specified bounds and an integer scale factor.
+    /// Scale is applied at the rendering boundary — layout and input remain in logical pixels.
+    pub fn new_with_scale(bounds: Bounds, scale: u32) -> Scene {
+        let mut scene = Self::new_with_bounds(bounds);
+        scene.scale = scale;
+        scene
+    }
+
+    /// Returns the scene's integer scale factor (default 1).
+    pub fn scale(&self) -> u32 {
+        self.scale
+    }
+
     pub(crate) fn new() -> Scene {
         let bounds = Bounds::new(0, 0, 200, 200);
         Self::new_with_bounds(bounds)
