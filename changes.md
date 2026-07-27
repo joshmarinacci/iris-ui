@@ -1,3 +1,21 @@
+## 2026-07-27 13:30
+
+Added `examples/orientation.rs` — demonstrates display orientation using an inline `RotatedDisplay<D>` wrapper.
+
+`embedded-graphics-transform 0.1.0` targets `embedded-graphics-core 0.3` (embedded-graphics 0.7.x) and is incompatible with this project's 0.8.x (core 0.4). Instead, `RotatedDisplay` is implemented directly in the example using the same coordinate transforms the crate uses:
+- Rotate0: identity
+- Rotate90: `(phys_w-1-y, x)`
+- Rotate180: `(phys_w-1-x, phys_h-1-y)`
+- Rotate270: `(y, phys_h-1-x)`
+
+The wrapper implements `DrawTarget` and `Dimensions` so that `draw_content` receives a canvas whose `bounding_box()` reflects the logical (post-rotation) size, making the scene automatically adapt between landscape (0°/180°) and portrait (90°/270°).
+
+Press **R** to cycle through all four rotations.
+
+```
+cargo run --example orientation --features std
+```
+
 ## 2026-07-27 12:35
 
 Made `EmbeddedDrawingContext` generic over display color type (`src/device.rs`).

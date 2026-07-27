@@ -205,7 +205,7 @@ fn make_scene(scale: u32) -> Scene {
         let themes_list_id = ViewId::new("themes-list");
         let themes = make_list_view(
             &themes_list_id,
-            vec!["Light", "Dark", "Ice Cream", "Minty Fresh", "Amber"],
+            vec!["Light", "Dark", "Ice Cream", "Minty Fresh", "Amber", "Black & White"],
             0,
         );
         scene.add_view_to_parent(themes, &panel.name);
@@ -324,6 +324,7 @@ fn main() -> Result<(), std::convert::Infallible> {
         let output_settings = OutputSettingsBuilder::new()
             .scale(2)
             .theme(BinaryColorTheme::LcdWhite)
+            .pixel_spacing(0)
             .build();
         run_loop(display, &output_settings, scene, theme);
     } else {
@@ -422,6 +423,7 @@ fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme) {
                     "Ice Cream" => copy_theme_colors(theme, &ICE_CREAM_THEME),
                     "Minty Fresh" => copy_theme_colors(theme, &MINTY_FRESH),
                     "Amber" => copy_theme_colors(theme, &AMBER),
+                    "Black & White" => copy_theme_colors(theme, &BLACK_WHITE_THEME),
                     _ => {}
                 }
                 scene.mark_dirty_all();
@@ -535,6 +537,27 @@ const AMBER: Theme = Theme {
     },
     accented: ViewStyle {
         fill: Rgb565::RED,
+        text: Rgb565::WHITE,
+    },
+};
+
+const BLACK_WHITE_THEME: Theme = Theme {
+    font: FontKind::Bitmap(FONT_7X13),
+    bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
+    standard: ViewStyle {
+        fill: Rgb565::WHITE,
+        text: Rgb565::BLACK,
+    },
+    panel: ViewStyle {
+        fill: Rgb565::WHITE,
+        text: Rgb565::BLACK,
+    },
+    selected: ViewStyle {
+        fill: Rgb565::BLACK,
+        text: Rgb565::WHITE,
+    },
+    accented: ViewStyle {
+        fill: Rgb565::BLACK,
         text: Rgb565::WHITE,
     },
 };

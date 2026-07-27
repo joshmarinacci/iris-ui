@@ -27,13 +27,14 @@ impl FromRgb565 for Rgb565 {
 }
 
 impl FromRgb565 for BinaryColor {
-    /// Black maps to `Off`; any other color maps to `On`.
+    /// Black maps to `On` (ink/foreground); any other color maps to `Off` (paper/background).
+    /// This matches `LcdWhite` where On=dark ink, Off=light paper.
     #[inline]
     fn from_rgb565(color: Rgb565) -> Self {
         if color == Rgb565::BLACK {
-            BinaryColor::Off
-        } else {
             BinaryColor::On
+        } else {
+            BinaryColor::Off
         }
     }
 }

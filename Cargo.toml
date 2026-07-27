@@ -25,3 +25,12 @@ ttf = ["fontdue"]
 [[example]]
 name = "simulator"
 required-features = ["std"]
+
+[[example]]
+name = "orientation"
+required-features = ["std"]
+
+[dev-dependencies]
+# embedded-graphics-transform 0.1.0 targets embedded-graphics-core 0.3 (used by eg 0.7.x)
+# and is incompatible with this project's embedded-graphics 0.8.x (core 0.4). The
+# orientation example implements the same coordinate transforms inline.
