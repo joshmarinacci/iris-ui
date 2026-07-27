@@ -1,18 +1,18 @@
+use crate::font::FontKind;
 use crate::geom::{Bounds, Point};
 use crate::view::Align;
-use embedded_graphics::mono_font::MonoFont;
 use embedded_graphics::pixelcolor::Rgb565;
 
 pub struct TextStyle<'a> {
     pub halign: Align,
     pub valign: Align,
     pub underline: bool,
-    pub font: &'a MonoFont<'static>,
+    pub font: FontKind,
     pub color: &'a Rgb565,
 }
 
 impl<'a> TextStyle<'a> {
-    pub fn new(font: &'a MonoFont<'static>, color: &'a Rgb565) -> TextStyle<'a> {
+    pub fn new(font: FontKind, color: &'a Rgb565) -> TextStyle<'a> {
         TextStyle {
             font,
             color,
@@ -54,7 +54,7 @@ pub fn draw_centered_text(
     ctx: &mut dyn DrawingContext,
     text: &str,
     bounds: &Bounds,
-    font: &MonoFont<'static>,
+    font: FontKind,
     color: &Rgb565,
 ) {
     ctx.text(

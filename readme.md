@@ -192,14 +192,90 @@ See the full example code in [examples/custom_view.rs](examples/custom_view.rs).
 However, these are just guidelines. A view can feel free to ignore them and draw whatever it wants.
 The theme fields should be used for:
 
-* **bg**: the background of components like buttons and text inputs.
-* **fg**: the foreground of components, which usually means the text color.
-* **panel_bg**: the background of panels and other containers. Depending on the theme this may or may not be the same as
-  *bg*.
+* **standard**: fill and text colors for buttons, text inputs, and most interactive components.
+* **panel**: fill and text colors for panels and containers — may differ from `standard` depending on the theme.
+* **selected**: colors used to indicate a selected or focused state.
+* **accented**: highlight color, used for primary buttons or decorations.
 * **font**: the default font used for all text.
 * **bold_font**: the bold variant of the current font. Used for button titles.
-* **selected_bg**: a background color used to indicate something is selected.
-* **selected_fg**: a text color used to indicate something is selected. Usually used with `selected_bg`.
+
+Each color group is a `ViewStyle { fill: Rgb565, text: Rgb565 }`.
+
+### Fonts
+
+Fonts are represented by the `FontKind` enum. There are two variants:
+
+**Bitmap fonts** use the built-in `MonoFont` types from `embedded-graphics`. They work on any target (std or
+`no_std`) and require no extra dependencies:
+
+```rust
+use embedded_graphics::mono_font::ascii::{FONT_7X13, FONT_7X13_BOLD};
+use iris_ui::{FontKind, Theme, BW_THEME};
+
+let theme = Theme {
+    font:      FontKind::Bitmap(FONT_7X13),
+    bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
+    ..BW_THEME
+};
+```
+
+**TrueType fonts** use [`fontdue`](https://crates.io/crates/fontdue) for scalable, higher-quality text. Enable the
+optional `ttf` feature in your `Cargo.toml`:
+
+```toml
+iris-ui = { ..., features = ["ttf"] }
+```
+
+Then load a font from bytes and pass a reference to a `'static` slot (the example below uses `std`; see the
+no_std section for an alternative):
+
+```rust
+use std::sync::OnceLock;
+use iris_ui::{FontKind, Theme, BW_THEME};
+
+static FONT: OnceLock<fontdue::Font> = OnceLock::new();
+
+let font: &'static fontdue::Font = FONT.get_or_init(|| {
+    fontdue::Font::from_bytes(
+        include_bytes!("my_font.ttf"),
+        fontdue::FontSettings::default(),
+    ).expect("failed to parse font")
+});
+
+let theme = Theme {
+    font:      FontKind::TrueType { font, size: 13.0 },
+    bold_font: FontKind::TrueType { font, size: 14.0 },
+    ..BW_THEME
+};
+```
+
+On `no_std + alloc` targets, use `MaybeUninit` in place of `OnceLock`:
+
+```rust
+static mut FONT_STORAGE: core::mem::MaybeUninit<fontdue::Font> =
+    core::mem::MaybeUninit::uninit();
+
+// called once during init:
+let font_ref: &'static fontdue::Font = unsafe {
+    FONT_STORAGE.write(
+        fontdue::Font::from_bytes(
+            include_bytes!("my_font.ttf"),
+            fontdue::FontSettings::default(),
+        ).expect("failed to parse font")
+    );
+    FONT_STORAGE.assume_init_ref()
+};
+
+let theme = Theme {
+    font:      FontKind::TrueType { font: font_ref, size: 12.0 },
+    bold_font: FontKind::TrueType { font: font_ref, size: 12.0 },
+    ..BW_THEME
+};
+```
+
+The simulator example includes a **TTF** button in the font-size toolbar when built with
+`cargo run --example simulator --features std,ttf`. It loads a font from a known system path at runtime
+(Geneva on macOS, DejaVu Sans on Linux).
 
 ## Event Loop
 

@@ -15,7 +15,7 @@ pub fn make_label(name: &'static str, title: &str) -> View {
             }
         }),
         draw: Some(|e| {
-            let style = TextStyle::new(&e.theme.font, &e.theme.standard.text);
+            let style = TextStyle::new(e.theme.font, &e.theme.standard.text);
             e.ctx.fill_text(&e.view.bounds, &e.view.title, &style);
         }),
         ..Default::default()
@@ -34,7 +34,7 @@ pub fn make_header_label(name: &'static str, title: &str) -> View {
             }
         }),
         draw: Some(|e| {
-            let style = TextStyle::new(&e.theme.bold_font, &e.theme.accented.fill);
+            let style = TextStyle::new(e.theme.bold_font, &e.theme.accented.fill);
             e.ctx.fill_text(&e.view.bounds, &e.view.title, &style);
         }),
         ..Default::default()

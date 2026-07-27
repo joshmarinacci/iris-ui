@@ -12,7 +12,7 @@ use iris_ui::geom::{Bounds, Insets, Point as GPoint};
 use iris_ui::scene::{click_at, draw_scene, event_at_focused, layout_scene, Scene};
 use iris_ui::toggle_button::make_toggle_button;
 use iris_ui::toggle_group::{layout_toggle_group, make_toggle_group, SelectOneOfState};
-use iris_ui::{util, Theme, ViewStyle, BW_THEME};
+use iris_ui::{util, FontKind, Theme, ViewStyle, BW_THEME};
 use std::convert::Into;
 
 use embedded_graphics::prelude::*;
@@ -35,6 +35,34 @@ use iris_ui::view::Align::{Center, Start};
 use iris_ui::view::Flex::{Fixed, Grow, Shrink};
 use iris_ui::view::{Align, View, ViewId};
 use log::{info, LevelFilter};
+
+#[cfg(feature = "ttf")]
+static TTF_FONT: std::sync::OnceLock<Option<fontdue::Font>> = std::sync::OnceLock::new();
+
+#[cfg(feature = "ttf")]
+fn get_ttf_font() -> Option<&'static fontdue::Font> {
+    TTF_FONT
+        .get_or_init(|| {
+            let paths: &[&str] = &[
+                "/System/Library/Fonts/Geneva.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",
+            ];
+            for path in paths {
+                if let Ok(bytes) = std::fs::read(path) {
+                    if let Ok(font) =
+                        fontdue::Font::from_bytes(bytes.as_slice(), fontdue::FontSettings::default())
+                    {
+                        info!("loaded TTF font from {path}");
+                        return Some(font);
+                    }
+                }
+            }
+            info!("no system TTF font found; TTF button will have no effect");
+            None
+        })
+        .as_ref()
+}
 
 const POPUP_MENU: &'static ViewId = &ViewId::new("popup-menu");
 fn make_scene() -> Scene {
@@ -199,6 +227,11 @@ fn make_scene() -> Scene {
         scene.add_view_to_parent(med_button, &font_buttons_name);
         let large_button = make_full_button(&scene.next_view_id(), "Large", "font-large", false);
         scene.add_view_to_parent(large_button, &font_buttons_name);
+        #[cfg(feature = "ttf")]
+        {
+            let ttf_button = make_full_button(&scene.next_view_id(), "TTF", "font-ttf", false);
+            scene.add_view_to_parent(ttf_button, &font_buttons_name);
+        }
         scene.add_view_to_root(font_buttons);
     }
 
@@ -321,19 +354,27 @@ fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme) {
             info!("got a command {cmd}");
             match cmd.as_str() {
                 "font-small" => {
-                    theme.font = FONT_5X7;
-                    theme.bold_font = FONT_5X7;
+                    theme.font = FontKind::Bitmap(FONT_5X7);
+                    theme.bold_font = FontKind::Bitmap(FONT_5X7);
                     scene.mark_layout_dirty();
                 }
                 "font-medium" => {
-                    theme.font = FONT_6X10;
-                    theme.bold_font = FONT_6X10;
+                    theme.font = FontKind::Bitmap(FONT_6X10);
+                    theme.bold_font = FontKind::Bitmap(FONT_6X10);
                     scene.mark_layout_dirty();
                 }
                 "font-large" => {
-                    theme.font = FONT_7X13;
-                    theme.bold_font = FONT_7X13_BOLD;
+                    theme.font = FontKind::Bitmap(FONT_7X13);
+                    theme.bold_font = FontKind::Bitmap(FONT_7X13_BOLD);
                     scene.mark_layout_dirty();
+                }
+                #[cfg(feature = "ttf")]
+                "font-ttf" => {
+                    if let Some(font) = get_ttf_font() {
+                        theme.font = FontKind::TrueType { font, size: 13.0 };
+                        theme.bold_font = FontKind::TrueType { font, size: 14.0 };
+                        scene.mark_layout_dirty();
+                    }
                 }
                 "open-popup" => {
                     let menu = make_list_view(POPUP_MENU, vec!["Item 1", "Item 2", "Item 3"], 0)
@@ -368,8 +409,8 @@ fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme) {
 }
 
 const LIGHT_THEME: Theme = Theme {
-    font: FONT_7X13,
-    bold_font: FONT_7X13_BOLD,
+    font: FontKind::Bitmap(FONT_7X13),
+    bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
     standard: ViewStyle {
         fill: Rgb565::WHITE,
         text: Rgb565::BLACK,
@@ -388,8 +429,8 @@ const LIGHT_THEME: Theme = Theme {
     },
 };
 const DARK_THEME: Theme = Theme {
-    font: FONT_7X13,
-    bold_font: FONT_7X13_BOLD,
+    font: FontKind::Bitmap(FONT_7X13),
+    bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
     standard: ViewStyle {
         fill: hex_str_to_rgb565("#222222"),
         text: hex_str_to_rgb565("#999999"),
@@ -410,8 +451,8 @@ const DARK_THEME: Theme = Theme {
 
 //https://lospec.com/palette-list/ice-cream-gb
 const ICE_CREAM_THEME: Theme = Theme {
-    font: FONT_7X13,
-    bold_font: FONT_7X13_BOLD,
+    font: FontKind::Bitmap(FONT_7X13),
+    bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
     standard: ViewStyle {
         fill: hex_str_to_rgb565("fff6d3"),
         text: hex_str_to_rgb565("#7c3f58"),
@@ -431,8 +472,8 @@ const ICE_CREAM_THEME: Theme = Theme {
 };
 //https://lospec.com/palette-list/minty-fresh
 const MINTY_FRESH: Theme = Theme {
-    font: FONT_7X13,
-    bold_font: FONT_7X13_BOLD,
+    font: FontKind::Bitmap(FONT_7X13),
+    bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
     standard: ViewStyle {
         fill: hex_str_to_rgb565("#856d52"),
         text: hex_str_to_rgb565("#fbffe0"),
@@ -452,8 +493,8 @@ const MINTY_FRESH: Theme = Theme {
 };
 //https://lospec.com/palette-list/amber-crtgb
 const AMBER: Theme = Theme {
-    font: FONT_7X13,
-    bold_font: FONT_7X13_BOLD,
+    font: FontKind::Bitmap(FONT_7X13),
+    bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
     standard: ViewStyle {
         fill: hex_str_to_rgb565("#0d0405"),
         text: hex_str_to_rgb565("#d35600"),

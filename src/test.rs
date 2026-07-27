@@ -1,3 +1,4 @@
+use crate::font::FontKind;
 use crate::geom::{Bounds, Point};
 use crate::gfx::{DrawingContext, TextStyle};
 use crate::scene::Scene;
@@ -31,8 +32,8 @@ impl MockDrawingContext {
     }
     pub fn make_mock_theme() -> Theme {
         Theme {
-            font: FONT_6X10,
-            bold_font: FONT_7X13_BOLD,
+            font: FontKind::Bitmap(FONT_6X10),
+            bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
             standard: ViewStyle {
                 fill: Rgb565::WHITE,
                 text: Rgb565::BLACK,
@@ -54,7 +55,6 @@ impl MockDrawingContext {
 }
 impl DrawingContext for MockDrawingContext {
     fn fill_rect(&mut self, bounds: &Bounds, color: &Rgb565) {
-        // info!("fill_rect {:?} {:?} {:?}", bounds, self.clip_rect, color);
         util::bounds_to_rect(bounds)
             .intersection(&util::bounds_to_rect(&self.clip_rect))
             .into_styled(PrimitiveStyle::with_fill(*color))
@@ -77,18 +77,25 @@ impl DrawingContext for MockDrawingContext {
             .unwrap();
     }
 
-    // fn fill_text(&mut self, bounds: &Bounds, text: &str, style: &TextStyle);
     fn fill_text(&mut self, bounds: &Bounds, text: &str, style: &TextStyle) {
-        let style = MonoTextStyle::new(&style.font, *style.color);
-        let mut pt = embedded_graphics::geometry::Point::new(bounds.position.x, bounds.position.y);
-        pt.y += bounds.size.h / 2;
-        pt.y += (style.font.baseline as i32) / 2;
-        let w = (style.font.character_size.width as i32) * (text.len() as i32);
-        pt.x += (bounds.size.w - w) / 2;
-        Text::new(text, pt, style).draw(&mut self.display).unwrap();
+        match style.font {
+            FontKind::Bitmap(mono_font) => {
+                let mono_style = MonoTextStyle::new(&mono_font, *style.color);
+                let mut pt = EPoint::new(bounds.position.x, bounds.position.y);
+                pt.y += bounds.size.h / 2;
+                pt.y += (mono_font.baseline as i32) / 2;
+                let w = mono_font.character_size.width as i32 * text.len() as i32;
+                pt.x += (bounds.size.w - w) / 2;
+                Text::new(text, pt, mono_style).draw(&mut self.display).unwrap();
+            }
+            #[cfg(feature = "ttf")]
+            FontKind::TrueType { .. } => {
+                // No-op in mock context — tests don't require pixel-accurate TTF output
+            }
+        }
     }
 
-    fn text(&mut self, text: &str, _position: &Point, _style: &TextStyle) {}
+    fn text(&mut self, _text: &str, _position: &Point, _style: &TextStyle) {}
 
     fn translate(&mut self, offset: &Point) {
         self.offset = self.offset + *offset;

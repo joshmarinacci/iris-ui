@@ -92,7 +92,7 @@ fn draw_toggle_group(e: &mut DrawEvent) {
             }
 
             // draw text
-            draw_centered_text(e.ctx, item, &bds, &e.theme.font, &style.text);
+            draw_centered_text(e.ctx, item, &bds, e.theme.font, &style.text);
 
             // draw left edge except for the first one
             if i != 0 {
@@ -110,8 +110,9 @@ fn draw_toggle_group(e: &mut DrawEvent) {
 
 pub fn layout_toggle_group(pass: &mut LayoutEvent) {
     if let Some(view) = pass.scene.get_view_mut(pass.target) {
-        let char_size = pass.theme.font.character_size;
-        let height = char_size.height + (char_size.height / 2) * 2; // padding
+        let cw = pass.theme.font.char_width();
+        let ch = pass.theme.font.char_height();
+        let height = ch + (ch / 2) * 2;
         if view.h_flex == Grow {
             view.bounds.size.w = pass.space.w;
         }
@@ -119,9 +120,9 @@ pub fn layout_toggle_group(pass: &mut LayoutEvent) {
             if let Some(state) = view.get_state::<SelectOneOfState>() {
                 let mut width = 0;
                 for item in &state.items {
-                    width += char_size.width as i32;
-                    width += item.len() as i32 * char_size.width as i32;
-                    width += char_size.width as i32;
+                    width += cw;
+                    width += pass.theme.font.str_width(item);
+                    width += cw;
                 }
                 view.bounds.size.w = width;
             }
@@ -130,7 +131,7 @@ pub fn layout_toggle_group(pass: &mut LayoutEvent) {
             view.bounds.size.h = pass.space.h;
         }
         if view.v_flex == Shrink {
-            view.bounds.size.h = height as i32;
+            view.bounds.size.h = height;
         }
     }
     pass.layout_all_children(&pass.target.clone(), pass.space);

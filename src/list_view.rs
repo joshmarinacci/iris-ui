@@ -128,7 +128,7 @@ fn draw_list(e: &mut DrawEvent) {
             }
 
             // draw text
-            draw_centered_text(e.ctx, item, &bds, &e.theme.font, &style.text);
+            draw_centered_text(e.ctx, item, &bds, e.theme.font, &style.text);
         }
     }
     e.ctx.stroke_rect(&e.view.bounds, &e.theme.standard.text);
@@ -136,10 +136,10 @@ fn draw_list(e: &mut DrawEvent) {
 
 fn layout_list(e: &mut LayoutEvent) {
     if let Some(state) = e.scene.get_view_state::<ListState>(e.target) {
-        let ch = e.theme.font.character_size;
-        let height = state.items.len() as u32 * ch.height * 2;
+        let ch = e.theme.font.char_height();
+        let height = state.items.len() as i32 * ch * 2;
         if let Some(view) = e.scene.get_view_mut(e.target) {
-            view.bounds.size.h = height as i32;
+            view.bounds.size.h = height;
         }
     }
 }

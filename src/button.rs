@@ -53,7 +53,7 @@ pub fn make_full_button(name: &ViewId, title: &str, command: &str, primary: bool
                     e.ctx,
                     &e.view.title,
                     &e.view.bounds,
-                    &e.theme.bold_font,
+                    e.theme.bold_font,
                     &e.theme.accented.text,
                 );
             } else {
@@ -67,7 +67,7 @@ pub fn make_full_button(name: &ViewId, title: &str, command: &str, primary: bool
                     e.ctx,
                     &e.view.title,
                     &e.view.bounds,
-                    &e.theme.bold_font,
+                    e.theme.bold_font,
                     &e.theme.standard.text,
                 );
             }

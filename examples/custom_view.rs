@@ -9,7 +9,7 @@ use iris_ui::device::EmbeddedDrawingContext;
 use iris_ui::geom::{Bounds, Size};
 use iris_ui::scene::{Scene, draw_scene, layout_scene};
 use iris_ui::view::{View, ViewId};
-use iris_ui::{Theme, ViewStyle};
+use iris_ui::{FontKind, Theme, ViewStyle};
 use log::LevelFilter;
 use std::thread::sleep;
 use std::time::Duration;
@@ -68,8 +68,8 @@ fn main() -> Result<(), std::convert::Infallible> {
     scene.add_view_to_root(make_progress_bar(&progress_id));
 
     let theme = Theme {
-        font: FONT_7X13,
-        bold_font: FONT_7X13_BOLD,
+        font: FontKind::Bitmap(FONT_7X13),
+        bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
         standard: ViewStyle {
             fill: Rgb565::WHITE,
             text: Rgb565::BLACK,

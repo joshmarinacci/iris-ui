@@ -8,7 +8,6 @@ use crate::input::{InputEvent, OutputAction};
 use crate::scene::Scene;
 use crate::view::ViewId;
 use alloc::string::String;
-use embedded_graphics::mono_font::MonoFont;
 use embedded_graphics::mono_font::ascii::{FONT_7X13, FONT_7X13_BOLD};
 use embedded_graphics::pixelcolor::{Rgb565, RgbColor};
 use geom::{Bounds, Point};
@@ -17,6 +16,7 @@ use view::View;
 
 pub mod button;
 pub mod device;
+pub mod font;
 pub mod geom;
 pub mod gfx;
 pub mod grid;
@@ -34,6 +34,8 @@ pub mod toggle_group;
 pub mod util;
 pub mod view;
 
+pub use font::FontKind;
+
 pub struct DrawEvent<'a> {
     pub ctx: &'a mut dyn DrawingContext,
     pub theme: &'a Theme,
@@ -46,10 +48,10 @@ pub type DrawFn = fn(event: &mut DrawEvent);
 pub type LayoutFn = fn(layout: &mut LayoutEvent);
 pub type InputFn = fn(event: &mut GuiEvent) -> Option<OutputAction>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Theme {
-    pub font: MonoFont<'static>,
-    pub bold_font: MonoFont<'static>,
+    pub font: FontKind,
+    pub bold_font: FontKind,
     pub standard: ViewStyle,
     pub accented: ViewStyle,
     pub selected: ViewStyle,
@@ -119,8 +121,8 @@ pub const BW_THEME: Theme = Theme {
         fill: Rgb565::BLACK,
         text: Rgb565::WHITE,
     },
-    font: FONT_7X13,
-    bold_font: FONT_7X13_BOLD,
+    font: FontKind::Bitmap(FONT_7X13),
+    bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
 };
 
 #[cfg(test)]
@@ -251,7 +253,7 @@ mod tests {
         e.ctx.fill_text(
             &e.view.bounds,
             &e.view.title,
-            &TextStyle::new(&e.theme.font, &e.theme.standard.text),
+            &TextStyle::new(e.theme.font, &e.theme.standard.text),
         );
     }
     fn make_label(name: &ViewId) -> View {
@@ -402,13 +404,13 @@ mod tests {
                         if state == "enabled" {
                             e.ctx.fill_rect(&e.view.bounds, &e.theme.standard.text);
                             e.ctx.stroke_rect(&e.view.bounds, &e.theme.standard.fill);
-                            let style = TextStyle::new(&e.theme.font, &e.theme.standard.fill)
+                            let style = TextStyle::new(e.theme.font, &e.theme.standard.fill)
                                 .with_halign(Align::Center);
                             e.ctx.fill_text(&e.view.bounds, &e.view.title, &style);
                         } else {
                             e.ctx.fill_rect(&e.view.bounds, &e.theme.standard.fill);
                             e.ctx.stroke_rect(&e.view.bounds, &e.theme.standard.text);
-                            let style = TextStyle::new(&e.theme.font, &e.theme.standard.text)
+                            let style = TextStyle::new(e.theme.font, &e.theme.standard.text)
                                 .with_halign(Align::Center);
                             e.ctx.fill_text(&e.view.bounds, &e.view.title, &style);
                         }

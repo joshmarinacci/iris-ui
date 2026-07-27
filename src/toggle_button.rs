@@ -50,7 +50,7 @@ fn draw_toggle_button(e: &mut DrawEvent) {
         e.ctx,
         &e.view.title,
         &e.view.bounds,
-        &e.theme.font,
+        e.theme.font,
         &style.text,
     );
 }
@@ -92,14 +92,15 @@ mod tests {
         {
             let mut button = scene.get_view_mut(&ViewId::new("toggle")).unwrap();
             assert_eq!(button.name, ViewId::new("toggle"));
-            let ch_size = &theme.font.character_size;
+            let cw = theme.font.char_width();
+            let ch = theme.font.char_height();
             assert_eq!(
                 button.bounds,
                 Bounds::new(
                     0,
                     0,
-                    (("toggle".len() as u32) * ch_size.width + (ch_size.width) * 2) as i32,
-                    (ch_size.height + (ch_size.height / 2) * 2) as i32
+                    theme.font.str_width("toggle") + cw * 2,
+                    ch + (ch / 2) * 2,
                 )
             );
             let state = &mut button.get_state::<SelectedState>().unwrap();
