@@ -65,8 +65,8 @@ fn get_ttf_font() -> Option<&'static fontdue::Font> {
 }
 
 const POPUP_MENU: &'static ViewId = &ViewId::new("popup-menu");
-fn make_scene() -> Scene {
-    let mut scene = Scene::new_with_scale(Bounds::new(0, 0, 320, 240), 2);
+fn make_scene(scale: u32) -> Scene {
+    let mut scene = Scene::new_with_scale(Bounds::new(0, 0, 320, 240), scale);
     const TABBED_PANEL: &'static ViewId = &ViewId::new("tabbed-panel");
 
     let tab_names = vec!["buttons", "layouts", "lists", "inputs", "themes"];
@@ -253,7 +253,12 @@ fn main() -> Result<(), std::convert::Infallible> {
         .filter(None, LevelFilter::Info)
         .init();
 
-    let mut scene = make_scene();
+    let scale: u32 = std::env::args()
+        .find(|a| a.starts_with("--scale="))
+        .and_then(|a| a["--scale=".len()..].parse().ok())
+        .unwrap_or(2);
+
+    let mut scene = make_scene(scale);
     let scale = scene.scale();
     let mut display: SimulatorDisplay<Rgb565> = SimulatorDisplay::new(Size::new(320 * scale, 240 * scale));
 

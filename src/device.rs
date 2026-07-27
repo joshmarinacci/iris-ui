@@ -127,7 +127,7 @@ fn draw_ttf_glyphs<T: DrawTarget<Color = Rgb565>>(
                 }
             }
         }
-        cursor_x += metrics.advance_width as i32;
+        cursor_x += metrics.advance_width.round() as i32;
     }
 }
 
@@ -210,12 +210,20 @@ where
             FontKind::TrueType { font, size } => {
                 let total_w: i32 = text
                     .chars()
-                    .map(|c| font.metrics(c, size).advance_width as i32)
+                    .map(|c| font.metrics(c, size).advance_width.round() as i32)
                     .sum();
+                // Glyphs draw starting at cursor_x + xmin, not cursor_x.
+                // Subtract the first character's xmin so the visible text is centered,
+                // not the cursor range.
+                let first_xmin = text
+                    .chars()
+                    .next()
+                    .map(|c| font.metrics(c, size).xmin)
+                    .unwrap_or(0);
                 let start_x = match text_style.halign {
                     Align::Start => bounds.position.x + 5,
-                    Align::Center => bounds.position.x + (bounds.size.w - total_w) / 2,
-                    Align::End => bounds.position.x + bounds.size.w - total_w,
+                    Align::Center => bounds.position.x + (bounds.size.w - total_w - first_xmin) / 2,
+                    Align::End => bounds.position.x + bounds.size.w - total_w - first_xmin,
                 };
                 // Center the baseline vertically within bounds
                 let baseline_y = bounds.position.y + bounds.size.h / 2 + (size * 0.25) as i32;
@@ -271,18 +279,41 @@ where
 
             #[cfg(feature = "ttf")]
             FontKind::TrueType { font, size } => {
-                // For the free-position `text()` method, use position.y as the baseline
+                let total_w: i32 = text
+                    .chars()
+                    .map(|c| font.metrics(c, size).advance_width.round() as i32)
+                    .sum();
+                let first_xmin = text
+                    .chars()
+                    .next()
+                    .map(|c| font.metrics(c, size).xmin)
+                    .unwrap_or(0);
+                let cursor_x = match style.halign {
+                    Align::Center => position.x - (total_w + first_xmin) / 2,
+                    Align::End => position.x - total_w,
+                    Align::Start => position.x,
+                };
+                let baseline_y = match style.valign {
+                    Align::Center => {
+                        if let Some(lm) = font.horizontal_line_metrics(size) {
+                            position.y + ((lm.ascent + lm.descent) * 0.5) as i32
+                        } else {
+                            position.y + (size * 0.25) as i32
+                        }
+                    }
+                    Align::Start | Align::End => position.y,
+                };
                 if self.scale == 1 {
                     let mut display = self.display.clipped(&bounds_to_rect(&self.clip));
                     let mut display = display.translated(self.offset);
-                    draw_ttf_glyphs(&mut display, text, font, size, position.x, position.y, *style.color);
+                    draw_ttf_glyphs(&mut display, text, font, size, cursor_x, baseline_y, *style.color);
                 } else {
                     let s = self.scale as i32;
                     let clipped = self.display.clipped(&bounds_to_rect(&self.clip));
                     let mut scaled = ScaledDisplay { inner: clipped, scale: self.scale };
                     let logical_offset = EPoint::new(self.offset.x / s, self.offset.y / s);
                     let mut display = scaled.translated(logical_offset);
-                    draw_ttf_glyphs(&mut display, text, font, size, position.x, position.y, *style.color);
+                    draw_ttf_glyphs(&mut display, text, font, size, cursor_x, baseline_y, *style.color);
                 }
             }
         }

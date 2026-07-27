@@ -1,3 +1,19 @@
+## 2026-07-27 12:10
+
+Fixed TTF text centering in `ctx.text()` (`src/device.rs`). The `text()` method is used by `draw_centered_text`, which buttons call with `bounds.center()` as the position.
+
+- **Horizontal**: The TTF branch was ignoring `style.halign` and starting the cursor at `position.x` directly, so all text drew from the center point rightward. Now `Align::Center` offsets the cursor left by `(total_w + first_xmin) / 2` so visible glyphs are centered on the position.
+- **Vertical**: The TTF branch passed `position.y` directly as the baseline, placing text below center. Now `Align::Center` uses `font.horizontal_line_metrics` to compute `baseline_y = position.y + (ascent + descent) / 2`, which aligns the visual midpoint of the text with the given position (falls back to `size * 0.25` offset if metrics are unavailable).
+
+## 2026-07-27 18:00
+
+Added `--scale=N` command-line option to the simulator example. The scale defaults to 2 if not specified.
+
+```
+cargo run --example simulator --features std -- --scale=1
+cargo run --example simulator --features std -- --scale=3
+```
+
 ## 2026-07-27 17:45
 
 Fixed compile error in `examples/simulator.rs`: `fontdue::Font::from_bytes` expects `impl Deref<Target=[u8]>`; passing `&Vec<u8>` resolves to `Vec<u8>`, not `[u8]`. Fixed by passing `bytes.as_slice()`.
