@@ -17,11 +17,13 @@ use std::convert::Into;
 
 use embedded_graphics::prelude::*;
 use embedded_graphics_simulator::sdl2::{Keycode, Mod};
+use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
 use embedded_graphics_simulator::{
-    OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
+    BinaryColorTheme, OutputSettings, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent,
+    Window,
 };
 use env_logger::Target;
-use iris_ui::device::EmbeddedDrawingContext;
+use iris_ui::device::{EmbeddedDrawingContext, FromRgb565};
 use iris_ui::grid::{make_grid_panel, GridLayoutState, LayoutConstraint};
 use iris_ui::input::{InputEvent, InputResult, OutputAction, TextAction};
 use iris_ui::label::{make_header_label, make_label};
@@ -247,26 +249,16 @@ fn make_column(name: &'static str) -> View {
         .with_layout(Some(layout_vbox))
 }
 
-fn main() -> Result<(), std::convert::Infallible> {
-    env_logger::Builder::new()
-        .target(Target::Stdout) // <-- redirects to stdout
-        .filter(None, LevelFilter::Info)
-        .init();
-
-    let scale: u32 = std::env::args()
-        .find(|a| a.starts_with("--scale="))
-        .and_then(|a| a["--scale=".len()..].parse().ok())
-        .unwrap_or(2);
-
-    let mut scene = make_scene(scale);
+fn run_loop<C>(
+    mut display: SimulatorDisplay<C>,
+    output_settings: &OutputSettings,
+    mut scene: Scene,
+    mut theme: Theme,
+) where
+    C: PixelColor + FromRgb565 + Into<Rgb888> + From<Rgb888>,
+{
     let scale = scene.scale();
-    let mut display: SimulatorDisplay<Rgb565> = SimulatorDisplay::new(Size::new(320 * scale, 240 * scale));
-
-    let mut theme = BW_THEME;
-    copy_theme_colors(&mut theme, &LIGHT_THEME);
-
-    let output_settings = OutputSettingsBuilder::new().scale(2).build();
-    let mut window = Window::new("Simulator Test", &output_settings);
+    let mut window = Window::new("Simulator Test", output_settings);
     'running: loop {
         let mut ctx = EmbeddedDrawingContext::new_with_scale(&mut display, scale);
         ctx.clip = scene.dirty_rect.scaled(scale);
@@ -276,9 +268,7 @@ fn main() -> Result<(), std::convert::Infallible> {
         for event in window.events() {
             match event {
                 SimulatorEvent::Quit => break 'running,
-                SimulatorEvent::KeyDown {
-                    keycode, keymod, ..
-                } => {
+                SimulatorEvent::KeyDown { keycode, keymod, .. } => {
                     let act: TextAction = keydown_to_char(keycode, keymod);
                     let evt = InputEvent::Text(act);
                     if let Some(result) = event_at_focused(&mut scene, &evt) {
@@ -292,13 +282,10 @@ fn main() -> Result<(), std::convert::Infallible> {
                         handle_events(result, &mut scene, &mut theme);
                     }
                 }
-                SimulatorEvent::MouseButtonDown { mouse_btn, point } => {
+                SimulatorEvent::MouseButtonDown { .. } => {
                     println!("mouse down");
                 }
-                SimulatorEvent::MouseWheel {
-                    scroll_delta,
-                    direction,
-                } => {
+                SimulatorEvent::MouseWheel { scroll_delta, direction } => {
                     info!("mouse wheel {scroll_delta:?} {direction:?}");
                     if let Some(result) = event_at_focused(
                         &mut scene,
@@ -310,6 +297,40 @@ fn main() -> Result<(), std::convert::Infallible> {
                 _ => {}
             }
         }
+    }
+}
+
+fn main() -> Result<(), std::convert::Infallible> {
+    env_logger::Builder::new()
+        .target(Target::Stdout)
+        .filter(None, LevelFilter::Info)
+        .init();
+
+    let scale: u32 = std::env::args()
+        .find(|a| a.starts_with("--scale="))
+        .and_then(|a| a["--scale=".len()..].parse().ok())
+        .unwrap_or(2);
+    let epaper = std::env::args().any(|a| a == "--epaper");
+
+    let scene = make_scene(scale);
+    let scale = scene.scale();
+
+    let mut theme = BW_THEME;
+    copy_theme_colors(&mut theme, &LIGHT_THEME);
+
+    if epaper {
+        let display: SimulatorDisplay<BinaryColor> =
+            SimulatorDisplay::new(Size::new(320 * scale, 240 * scale));
+        let output_settings = OutputSettingsBuilder::new()
+            .scale(2)
+            .theme(BinaryColorTheme::LcdWhite)
+            .build();
+        run_loop(display, &output_settings, scene, theme);
+    } else {
+        let display: SimulatorDisplay<Rgb565> =
+            SimulatorDisplay::new(Size::new(320 * scale, 240 * scale));
+        let output_settings = OutputSettingsBuilder::new().scale(2).build();
+        run_loop(display, &output_settings, scene, theme);
     }
     Ok(())
 }

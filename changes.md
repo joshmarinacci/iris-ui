@@ -1,3 +1,15 @@
+## 2026-07-27 12:35
+
+Made `EmbeddedDrawingContext` generic over display color type (`src/device.rs`).
+
+Added `pub trait FromRgb565: PixelColor` with implementations for `Rgb565` (identity) and `BinaryColor` (black→Off, anything else→On). All drawing structs and functions (`EmbeddedDrawingContext`, `ScaledDisplay`, `draw_ttf_glyphs`) now use `T: DrawTarget` with `T::Color: FromRgb565` instead of the hard-coded `T: DrawTarget<Color = Rgb565>`. Colors from the UI layer (always `Rgb565`) are converted at the draw boundary via `T::Color::from_rgb565(...)`.
+
+To use a `BinaryColor` display:
+```rust
+let mut display: SimulatorDisplay<BinaryColor> = SimulatorDisplay::new(size);
+let mut ctx = EmbeddedDrawingContext::new(&mut display);
+```
+
 ## 2026-07-27 12:10
 
 Fixed TTF text centering in `ctx.text()` (`src/device.rs`). The `text()` method is used by `draw_centered_text`, which buttons call with `bounds.center()` as the position.

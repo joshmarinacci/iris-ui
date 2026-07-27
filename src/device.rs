@@ -8,14 +8,40 @@ use embedded_graphics::Pixel;
 use embedded_graphics::draw_target::DrawTargetExt;
 use embedded_graphics::geometry::{Dimensions, Point as EPoint, Size as ESize};
 use embedded_graphics::mono_font::MonoTextStyleBuilder;
-use embedded_graphics::pixelcolor::Rgb565;
-use embedded_graphics::prelude::DrawTarget;
+use embedded_graphics::pixelcolor::{BinaryColor, PixelColor, Rgb565};
+use embedded_graphics::prelude::{DrawTarget, RgbColor};
 use embedded_graphics::primitives::{Line, Primitive, PrimitiveStyle, Rectangle};
 use embedded_graphics::text::{Alignment, Baseline, Text, TextStyleBuilder};
 
+/// Converts an `Rgb565` color to the display's native color type.
+/// Implement this for any color type you want to drive with `EmbeddedDrawingContext`.
+pub trait FromRgb565: PixelColor {
+    fn from_rgb565(color: Rgb565) -> Self;
+}
+
+impl FromRgb565 for Rgb565 {
+    #[inline]
+    fn from_rgb565(color: Rgb565) -> Self {
+        color
+    }
+}
+
+impl FromRgb565 for BinaryColor {
+    /// Black maps to `Off`; any other color maps to `On`.
+    #[inline]
+    fn from_rgb565(color: Rgb565) -> Self {
+        if color == Rgb565::BLACK {
+            BinaryColor::Off
+        } else {
+            BinaryColor::On
+        }
+    }
+}
+
 pub struct EmbeddedDrawingContext<'a, T>
 where
-    T: DrawTarget<Color = Rgb565>,
+    T: DrawTarget,
+    T::Color: FromRgb565,
 {
     pub display: &'a mut T,
     pub clip: Bounds,
@@ -25,7 +51,8 @@ where
 
 impl<'a, T> EmbeddedDrawingContext<'a, T>
 where
-    T: DrawTarget<Color = Rgb565>,
+    T: DrawTarget,
+    T::Color: FromRgb565,
 {
     pub fn new(display: &'a mut T) -> Self {
         EmbeddedDrawingContext {
@@ -68,7 +95,7 @@ struct ScaledDisplay<T> {
     scale: u32,
 }
 
-impl<T: DrawTarget<Color = Rgb565>> Dimensions for ScaledDisplay<T> {
+impl<T: DrawTarget> Dimensions for ScaledDisplay<T> {
     fn bounding_box(&self) -> Rectangle {
         let bb = self.inner.bounding_box();
         let s = self.scale as i32;
@@ -79,8 +106,8 @@ impl<T: DrawTarget<Color = Rgb565>> Dimensions for ScaledDisplay<T> {
     }
 }
 
-impl<T: DrawTarget<Color = Rgb565>> DrawTarget for ScaledDisplay<T> {
-    type Color = Rgb565;
+impl<T: DrawTarget> DrawTarget for ScaledDisplay<T> {
+    type Color = T::Color;
     type Error = T::Error;
 
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
@@ -104,14 +131,14 @@ impl<T: DrawTarget<Color = Rgb565>> DrawTarget for ScaledDisplay<T> {
 /// `baseline_y` is the screen y-coordinate of the text baseline.
 /// Alpha values above 127 are drawn; lower values are skipped (binary threshold).
 #[cfg(feature = "ttf")]
-fn draw_ttf_glyphs<T: DrawTarget<Color = Rgb565>>(
+fn draw_ttf_glyphs<T: DrawTarget>(
     display: &mut T,
     text: &str,
     font: &fontdue::Font,
     size: f32,
     mut cursor_x: i32,
     baseline_y: i32,
-    color: Rgb565,
+    color: T::Color,
 ) {
     for ch in text.chars() {
         let (metrics, bitmap) = font.rasterize(ch, size);
@@ -133,25 +160,29 @@ fn draw_ttf_glyphs<T: DrawTarget<Color = Rgb565>>(
 
 impl<'a, T> DrawingContext for EmbeddedDrawingContext<'a, T>
 where
-    T: DrawTarget<Color = Rgb565>,
+    T: DrawTarget,
+    T::Color: FromRgb565,
 {
     fn fill_rect(&mut self, bounds: &Bounds, color: &Rgb565) {
+        let c = T::Color::from_rgb565(*color);
         let mut display = self.display.clipped(&bounds_to_rect(&self.clip));
         let mut display = display.translated(self.offset);
         let _ = bounds_to_scaled_rect(bounds, self.scale)
-            .into_styled(PrimitiveStyle::with_fill(*color))
+            .into_styled(PrimitiveStyle::with_fill(c))
             .draw(&mut display);
     }
 
     fn stroke_rect(&mut self, bounds: &Bounds, color: &Rgb565) {
+        let c = T::Color::from_rgb565(*color);
         let mut display = self.display.clipped(&bounds_to_rect(&self.clip));
         let mut display = display.translated(self.offset);
         let _ = bounds_to_scaled_rect(bounds, self.scale)
-            .into_styled(PrimitiveStyle::with_stroke(*color, self.scale))
+            .into_styled(PrimitiveStyle::with_stroke(c, self.scale))
             .draw(&mut display);
     }
 
     fn line(&mut self, start: &GPoint, end: &GPoint, color: &Rgb565) {
+        let c = T::Color::from_rgb565(*color);
         let s = self.scale as i32;
         let mut display = self.display.clipped(&bounds_to_rect(&self.clip));
         let mut display = display.translated(self.offset);
@@ -160,16 +191,17 @@ where
             EPoint::new(end.x * s, end.y * s),
         );
         let _ = line
-            .into_styled(PrimitiveStyle::with_stroke(*color, self.scale))
+            .into_styled(PrimitiveStyle::with_stroke(c, self.scale))
             .draw(&mut display);
     }
 
     fn fill_text(&mut self, bounds: &Bounds, text: &str, text_style: &TextStyle) {
         match text_style.font {
             FontKind::Bitmap(mono_font) => {
+                let c = T::Color::from_rgb565(*text_style.color);
                 let mut text_builder = MonoTextStyleBuilder::new()
                     .font(&mono_font)
-                    .text_color(*text_style.color);
+                    .text_color(c);
                 if text_style.underline {
                     text_builder = text_builder.underline();
                 }
@@ -227,18 +259,19 @@ where
                 };
                 // Center the baseline vertically within bounds
                 let baseline_y = bounds.position.y + bounds.size.h / 2 + (size * 0.25) as i32;
+                let color = T::Color::from_rgb565(*text_style.color);
 
                 if self.scale == 1 {
                     let mut display = self.display.clipped(&bounds_to_rect(&self.clip));
                     let mut display = display.translated(self.offset);
-                    draw_ttf_glyphs(&mut display, text, font, size, start_x, baseline_y, *text_style.color);
+                    draw_ttf_glyphs(&mut display, text, font, size, start_x, baseline_y, color);
                 } else {
                     let s = self.scale as i32;
                     let clipped = self.display.clipped(&bounds_to_rect(&self.clip));
                     let mut scaled = ScaledDisplay { inner: clipped, scale: self.scale };
                     let logical_offset = EPoint::new(self.offset.x / s, self.offset.y / s);
                     let mut display = scaled.translated(logical_offset);
-                    draw_ttf_glyphs(&mut display, text, font, size, start_x, baseline_y, *text_style.color);
+                    draw_ttf_glyphs(&mut display, text, font, size, start_x, baseline_y, color);
                 }
             }
         }
@@ -247,9 +280,10 @@ where
     fn text(&mut self, text: &str, position: &GPoint, style: &TextStyle) {
         match style.font {
             FontKind::Bitmap(mono_font) => {
+                let c = T::Color::from_rgb565(*style.color);
                 let mut text_builder = MonoTextStyleBuilder::new()
                     .font(&mono_font)
-                    .text_color(*style.color);
+                    .text_color(c);
                 if style.underline {
                     text_builder = text_builder.underline();
                 }
@@ -303,17 +337,18 @@ where
                     }
                     Align::Start | Align::End => position.y,
                 };
+                let color = T::Color::from_rgb565(*style.color);
                 if self.scale == 1 {
                     let mut display = self.display.clipped(&bounds_to_rect(&self.clip));
                     let mut display = display.translated(self.offset);
-                    draw_ttf_glyphs(&mut display, text, font, size, cursor_x, baseline_y, *style.color);
+                    draw_ttf_glyphs(&mut display, text, font, size, cursor_x, baseline_y, color);
                 } else {
                     let s = self.scale as i32;
                     let clipped = self.display.clipped(&bounds_to_rect(&self.clip));
                     let mut scaled = ScaledDisplay { inner: clipped, scale: self.scale };
                     let logical_offset = EPoint::new(self.offset.x / s, self.offset.y / s);
                     let mut display = scaled.translated(logical_offset);
-                    draw_ttf_glyphs(&mut display, text, font, size, cursor_x, baseline_y, *style.color);
+                    draw_ttf_glyphs(&mut display, text, font, size, cursor_x, baseline_y, color);
                 }
             }
         }
