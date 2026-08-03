@@ -1,3 +1,12 @@
+## 2026-08-03
+
+Fixed `cargo test` failures caused by optional crates (`test-log`, `embedded_graphics_simulator`, `env_logger`) being used without feature gates:
+
+- `src/layouts.rs`, `src/lib.rs`, `src/tabbed_panel.rs`, `src/scene.rs`: Added `#[cfg(any(feature = "std", feature = "headless"))]` to test modules that depend on `test_log` or cross-reference helpers from other feature-gated test modules.
+- `Cargo.toml`: Added `[[example]]` entry for `custom_view` with `required-features = ["std"]` so it is not compiled during a plain `cargo test`.
+
+`cargo test` (no features) now runs 10 tests; `cargo test --features std` runs all 25.
+
 ## 2026-07-27 13:30
 
 Added `examples/orientation.rs` — demonstrates display orientation using an inline `RotatedDisplay<D>` wrapper.

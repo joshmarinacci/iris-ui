@@ -130,6 +130,7 @@ pub fn layout_tabbed_panel(pass: &mut LayoutEvent) {
 }
 
 #[cfg(test)]
+#[cfg(any(feature = "std", feature = "headless"))]
 mod tests {
     use crate::geom::{Bounds, Size};
     use crate::layouts::{layout_hbox, layout_std_panel, layout_vbox};

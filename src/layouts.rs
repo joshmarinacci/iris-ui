@@ -17,9 +17,15 @@ pub fn layout_vbox(pass: &mut LayoutEvent) {
     let gap = panel_state.gap;
     let padding = panel_state.padding.clone();
     let h_flex = parent.h_flex.clone();
+    let v_flex = parent.v_flex.clone();
+    let parent_w = parent.bounds.size.w;
+    let parent_h = parent.bounds.size.h;
     let mut available_space: Size = pass.space - padding;
     if h_flex == Fixed {
-        available_space.w = parent.bounds.size.w;
+        available_space.w = parent_w;
+    }
+    if v_flex == Fixed {
+        available_space.h = parent_h - padding.top - padding.bottom;
     }
 
     // get the intrinsic children
@@ -39,7 +45,7 @@ pub fn layout_vbox(pass: &mut LayoutEvent) {
             a
         };
     });
-    let vert_leftover = (pass.space - padding).h - kids_sum;
+    let vert_leftover = available_space.h - kids_sum;
 
     // layout the flex children
     let flex_kids = pass
@@ -211,6 +217,7 @@ pub fn layout_std_panel(pass: &mut LayoutEvent) {
 }
 
 #[cfg(test)]
+#[cfg(any(feature = "std", feature = "headless"))]
 pub(crate) mod tests {
     use crate::LayoutEvent;
     use crate::geom::{Bounds, Insets, Point, Size};
@@ -370,5 +377,93 @@ pub(crate) mod tests {
             name: name.clone(),
             ..Default::default()
         }
+    }
+
+    pub(crate) fn layout_fill(layout: &mut LayoutEvent) {
+        if let Some(view) = layout.scene.get_view_mut(&layout.target) {
+            if view.h_flex == Flex::Grow {
+                view.bounds.size.w = layout.space.w;
+            }
+            if view.v_flex == Flex::Grow {
+                view.bounds.size.h = layout.space.h;
+            }
+        }
+    }
+
+    #[test]
+    fn test_vbox_fixed_height() {
+        let mut scene = Scene::new();
+        let parent_id: ViewId = "parent".into();
+        let parent_view = View {
+            name: parent_id.clone(),
+            state: Some(Box::new(PanelState {
+                border_visible: false,
+                padding: Insets::new_same(10),
+                gap: 0,
+            })),
+            bounds: Bounds {
+                position: Point::new(0, 0),
+                size: Size::new(200, 120),
+            },
+            h_flex: Flex::Grow,
+            v_flex: Flex::Fixed,
+            layout: Some(layout_vbox),
+            ..Default::default()
+        };
+
+        let child1_id: ViewId = "child1".into();
+        scene.add_view_to_parent(
+            View {
+                name: child1_id.clone(),
+                title: "abc".into(),
+                h_align: Start,
+                layout: Some(layout_button),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+
+        // middle child grows to fill remaining vertical space
+        let child2_id: ViewId = "child2".into();
+        scene.add_view_to_parent(
+            View {
+                name: child2_id.clone(),
+                h_align: Start,
+                h_flex: Flex::Grow,
+                v_flex: Flex::Grow,
+                layout: Some(layout_fill),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+
+        let child3_id: ViewId = "child3".into();
+        scene.add_view_to_parent(
+            View {
+                name: child3_id.clone(),
+                title: "abc".into(),
+                h_align: Start,
+                layout: Some(layout_button),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+
+        scene.add_view_to_parent(parent_view, &scene.root_id());
+
+        let theme = MockDrawingContext::make_mock_theme();
+        layout_scene(&mut scene, &theme);
+
+        // panel keeps its fixed height of 120; width grows to fill scene
+        assert_eq!(view_bounds(&scene, &parent_id).size, Size::new(200, 120));
+        // child1: top fixed child, inset by padding
+        assert_eq!(view_bounds(&scene, &child1_id).position, Point::new(10, 10));
+        assert_eq!(view_bounds(&scene, &child1_id).size, Size::new(30, 10));
+        // child2: fills (120 - 2*padding - child1.h - child3.h) = 80 vertically
+        assert_eq!(view_bounds(&scene, &child2_id).position, Point::new(10, 20));
+        assert_eq!(view_bounds(&scene, &child2_id).size, Size::new(180, 80));
+        // child3: bottom fixed child, pushed below child2
+        assert_eq!(view_bounds(&scene, &child3_id).position, Point::new(10, 100));
+        assert_eq!(view_bounds(&scene, &child3_id).size, Size::new(30, 10));
     }
 }

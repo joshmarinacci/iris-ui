@@ -126,6 +126,7 @@ pub const BW_THEME: Theme = Theme {
 };
 
 #[cfg(test)]
+#[cfg(any(feature = "std", feature = "headless"))]
 mod tests {
     use super::*;
     use crate::button::make_button;

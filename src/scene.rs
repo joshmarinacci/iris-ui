@@ -461,6 +461,7 @@ pub fn layout_scene(scene: &mut Scene, theme: &Theme) {
 }
 
 #[cfg(test)]
+#[cfg(any(feature = "std", feature = "headless"))]
 mod tests {
     use crate::geom::Bounds;
     use crate::scene::Scene;

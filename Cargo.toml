@@ -30,6 +30,10 @@ required-features = ["std"]
 name = "orientation"
 required-features = ["std"]
 
+[[example]]
+name = "custom_view"
+required-features = ["std"]
+
 [dev-dependencies]
 # embedded-graphics-transform 0.1.0 targets embedded-graphics-core 0.3 (used by eg 0.7.x)
 # and is incompatible with this project's embedded-graphics 0.8.x (core 0.4). The
