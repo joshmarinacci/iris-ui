@@ -155,7 +155,7 @@ fn draw_ttf_glyphs<T: DrawTarget>(
                 }
             }
         }
-        cursor_x += metrics.advance_width.round() as i32;
+        cursor_x += (metrics.advance_width + 0.5) as i32;
     }
 }
 
@@ -243,7 +243,7 @@ where
             FontKind::TrueType { font, size } => {
                 let total_w: i32 = text
                     .chars()
-                    .map(|c| font.metrics(c, size).advance_width.round() as i32)
+                    .map(|c| (font.metrics(c, size).advance_width + 0.5) as i32)
                     .sum();
                 // Glyphs draw starting at cursor_x + xmin, not cursor_x.
                 // Subtract the first character's xmin so the visible text is centered,
@@ -316,7 +316,7 @@ where
             FontKind::TrueType { font, size } => {
                 let total_w: i32 = text
                     .chars()
-                    .map(|c| font.metrics(c, size).advance_width.round() as i32)
+                    .map(|c| (font.metrics(c, size).advance_width + 0.5) as i32)
                     .sum();
                 let first_xmin = text
                     .chars()
