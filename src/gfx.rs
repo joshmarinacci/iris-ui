@@ -48,6 +48,11 @@ pub trait DrawingContext {
     fn fill_text(&mut self, bounds: &Bounds, text: &str, style: &TextStyle);
     fn text(&mut self, text: &str, position: &Point, style: &TextStyle);
     fn translate(&mut self, offset: &Point);
+    /// Draw a single pixel at logical coordinates `(x, y)` in screen space
+    /// (i.e. after the current translation offset has been applied by the
+    /// caller).  The coordinate system matches that of `fill_rect` / `line`.
+    /// The default implementation is a no-op so existing impls keep compiling.
+    fn put_pixel(&mut self, _x: i32, _y: i32, _color: &Rgb565) {}
 }
 
 pub fn draw_centered_text(

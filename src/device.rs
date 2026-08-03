@@ -359,4 +359,20 @@ where
         let s = self.scale as i32;
         self.offset = self.offset.add(EPoint::new(offset.x * s, offset.y * s));
     }
+
+    fn put_pixel(&mut self, x: i32, y: i32, color: &Rgb565) {
+        let c = T::Color::from_rgb565(*color);
+        if self.scale == 1 {
+            let mut display = self.display.clipped(&bounds_to_rect(&self.clip));
+            let mut display = display.translated(self.offset);
+            let _ = display.draw_iter(core::iter::once(Pixel(EPoint::new(x, y), c)));
+        } else {
+            let s = self.scale as i32;
+            let clipped = self.display.clipped(&bounds_to_rect(&self.clip));
+            let mut scaled = ScaledDisplay { inner: clipped, scale: self.scale };
+            let logical_offset = EPoint::new(self.offset.x / s, self.offset.y / s);
+            let mut display = scaled.translated(logical_offset);
+            let _ = display.draw_iter(core::iter::once(Pixel(EPoint::new(x, y), c)));
+        }
+    }
 }
