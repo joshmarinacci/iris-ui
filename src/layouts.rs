@@ -394,6 +394,7 @@ pub(crate) mod tests {
     fn test_vbox_fixed_height() {
         let mut scene = Scene::new();
         let parent_id: ViewId = "parent".into();
+        // fixed 120 px height parent
         let parent_view = View {
             name: parent_id.clone(),
             state: Some(Box::new(PanelState {
