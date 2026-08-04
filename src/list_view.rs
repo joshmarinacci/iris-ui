@@ -29,7 +29,7 @@ pub struct ListState {
 
 impl ListState {
     pub fn select_next(&mut self) {
-        if self.selected < self.items.len() - 1 {
+        if !self.items.is_empty() && self.selected < self.items.len() - 1 {
             self.selected += 1;
         }
     }
@@ -57,6 +57,9 @@ fn input_list(e: &mut GuiEvent) -> Option<OutputAction> {
             if let Some(view) = e.scene.get_view_mut(e.target) {
                 let bounds = view.bounds;
                 if let Some(state) = view.get_state::<ListState>() {
+                    if state.items.is_empty() {
+                        return None;
+                    }
                     let cell_height = bounds.h() / (state.items.len() as i32);
                     let y = pt.y - bounds.y();
                     let n = y / cell_height;
@@ -104,6 +107,9 @@ fn draw_list(e: &mut DrawEvent) {
     e.ctx.fill_rect(&e.view.bounds, &e.theme.standard.fill);
     let name = e.view.name.clone();
     if let Some(state) = e.view.get_state::<ListState>() {
+        if state.items.is_empty() {
+            return;
+        }
         let cell_height = bounds.h() / (state.items.len() as i32);
         for (i, item) in state.items.iter().enumerate() {
             let style = if i == state.selected {

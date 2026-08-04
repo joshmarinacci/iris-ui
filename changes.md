@@ -1,3 +1,11 @@
+## 2026-08-04
+
+Added inline comments to `test_cliprect_nested` explaining how nested parent offsets accumulate into scene coordinates and what each assertion proves (`src/lib.rs`).
+
+Added `test_cliprect_toggle_group_in_panel` — verifies that clicking a toggle group inside a panel marks only the toggle group's global bounds dirty, not the panel or full scene (`src/lib.rs`). Also adds `make_panel` and `make_toggle_group` imports to the test module.
+
+Fixed divide-by-zero panic in `list_view.rs` when the list has no items: `input_list` and `draw_list` now return early if `state.items.is_empty()`.
+
 ## 2026-08-03
 
 Fixed `cargo test` failures caused by optional crates (`test-log`, `embedded_graphics_simulator`, `env_logger`) being used without feature gates:

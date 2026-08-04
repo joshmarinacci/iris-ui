@@ -132,8 +132,10 @@ mod tests {
     use crate::geom::Point;
     use crate::gfx::TextStyle;
     use crate::input::TextAction;
+    use crate::panel::make_panel;
     use crate::scene::{click_at, draw_scene, event_at_focused, pick_at};
     use crate::test::MockDrawingContext;
+    use crate::toggle_group::make_toggle_group;
     use crate::view::Align;
     use alloc::boxed::Box;
     use alloc::string::ToString;
@@ -582,37 +584,71 @@ mod tests {
     #[test]
     fn test_cliprect_nested() {
         let mut scene = Scene::new();
+        // panel1 is at (10,10) relative to the scene root
         let panel1 = View {
             name: "panel1".into(),
             bounds: Bounds::new(10, 10, 100, 100),
             ..Default::default()
         };
         scene.add_view_to_root(panel1);
+
+        // panel2 is at (10,10) relative to panel1, so (20,20) in scene coords
         let panel2 = View {
             name: "panel2".into(),
             bounds: Bounds::new(10, 10, 100, 100),
             ..Default::default()
         };
         scene.add_view_to_parent(panel2, &("panel1".into()));
+
+        // button is at (20,20) relative to panel2, so (40,40) in scene coords
         let button_id = ViewId::new("button");
         let button = make_button(&button_id, "Button").position_at(20, 20);
         scene.add_view_to_parent(button, &("panel2".into()));
 
-        // draw
+        // initial draw clears the dirty state
         repaint(&mut scene);
-        // check that dirty area is empty
         assert_eq!(scene.dirty, false);
         assert_eq!(scene.dirty_rect.is_empty(), true);
-        // nothing should be focused yet
+        // nothing focused before any interaction
         assert!(scene.focused.is_none());
 
+        // click at scene-coord (45,45), which lands on the button at (40,40)
         click_at(&mut scene, &vec![], Point::new(45, 45));
         scene.dump();
-        // now the button should be focused
+        // the button gains focus and marks itself dirty
         assert!(scene.focused.is_some());
         assert!(scene.focused.is_some_and(|id| id == button_id));
         assert_eq!(scene.dirty, true);
+        // dirty_rect is the button's global bounds, confirming the rect is
+        // computed in scene coordinates after walking the nested parent chain
         assert_eq!(scene.dirty_rect, Bounds::new(40, 40, 100, 100));
+    }
+
+    #[test]
+    fn test_cliprect_toggle_group_in_panel() {
+        let mut scene = Scene::new();
+        // panel is at (10, 10) in scene coords
+        let mut panel = make_panel(&"panel".into());
+        panel.bounds = Bounds::new(10, 10, 150, 50);
+        scene.add_view_to_root(panel);
+        // toggle group at (5, 5) within the panel → (15, 15) in scene coords
+        // make_toggle_group with 2 items sets initial size to (2*60=120, 30)
+        let group_id = ViewId::new("group");
+        let group = make_toggle_group(&group_id, vec!["A", "B"], 0).position_at(5, 5);
+        scene.add_view_to_parent(group, &"panel".into());
+
+        // initial repaint clears the dirty state
+        repaint(&mut scene);
+        assert_eq!(scene.dirty, false);
+        assert_eq!(scene.dirty_rect.is_empty(), true);
+
+        // click at scene-coord (50, 20), which lands on the toggle group at local (40, 10)
+        click_at(&mut scene, &vec![], Point::new(50, 20));
+
+        // only the toggle group should be dirty, not the panel or the full scene
+        assert_eq!(scene.dirty, true);
+        // dirty_rect is the toggle group's global bounds: local (5,5,120,30) + panel offset (10,10)
+        assert_eq!(scene.dirty_rect, Bounds::new(15, 15, 120, 30));
     }
 
     fn get_view_title(scene: &Scene, name: ViewId) -> String {
