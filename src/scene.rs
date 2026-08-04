@@ -318,6 +318,15 @@ impl Scene {
     }
 }
 
+impl Scene {
+    // resize the scene
+    pub fn resize(&mut self, bounds: Bounds) {
+        self.bounds = bounds;
+        self.mark_layout_dirty();
+        self.mark_dirty_all();
+    }
+}
+
 fn layout_root_panel(pass: &mut LayoutEvent) {
     if let Some(view) = pass.scene.get_view_mut(&pass.target) {
         view.bounds.size.w = pass.space.w;
