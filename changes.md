@@ -1,3 +1,10 @@
+## 2026-08-04 (2)
+
+Fixed remaining crash paths in `list_view.rs` when the list is empty or has zero-height cells:
+
+- `input_list` / `draw_list`: guard against `cell_height <= 0` (can happen when the view has no height yet) in addition to the empty-items guard added previously.
+- `TextAction::Enter`: wrapped in `!state.items.is_empty()` check to prevent an out-of-bounds index on an empty vec.
+
 ## 2026-08-04
 
 Added inline comments to `test_cliprect_nested` explaining how nested parent offsets accumulate into scene coordinates and what each assertion proves (`src/lib.rs`).

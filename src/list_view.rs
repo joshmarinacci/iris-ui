@@ -61,6 +61,9 @@ fn input_list(e: &mut GuiEvent) -> Option<OutputAction> {
                         return None;
                     }
                     let cell_height = bounds.h() / (state.items.len() as i32);
+                    if cell_height <= 0 {
+                        return None;
+                    }
                     let y = pt.y - bounds.y();
                     let n = y / cell_height;
                     if n >= 0 && n < state.items.len() as i32 {
@@ -88,10 +91,12 @@ fn input_list(e: &mut GuiEvent) -> Option<OutputAction> {
                     TextAction::Up => state.select_prev(),
                     TextAction::Down => state.select_next(),
                     TextAction::Enter => {
-                        info!("firmly selecting the item");
-                        return Some(OutputAction::Command(
-                            state.items[state.selected as usize].clone(),
-                        ));
+                        if !state.items.is_empty() {
+                            info!("firmly selecting the item");
+                            return Some(OutputAction::Command(
+                                state.items[state.selected].clone(),
+                            ));
+                        }
                     }
                     _ => {}
                 }
@@ -111,6 +116,9 @@ fn draw_list(e: &mut DrawEvent) {
             return;
         }
         let cell_height = bounds.h() / (state.items.len() as i32);
+        if cell_height <= 0 {
+            return;
+        }
         for (i, item) in state.items.iter().enumerate() {
             let style = if i == state.selected {
                 &e.theme.selected
