@@ -136,6 +136,8 @@ pub fn layout_toggle_group(pass: &mut LayoutEvent) {
     }
     pass.layout_all_children(&pass.target.clone(), pass.space);
 }
+
+#[cfg(test)]
 mod tests {
     use crate::geom::{Bounds, Point};
     use crate::scene::{Scene, click_at, draw_scene, layout_scene};

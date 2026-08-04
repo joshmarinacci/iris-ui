@@ -9,34 +9,34 @@ use embedded_graphics::prelude::RgbColor;
 use embedded_graphics::prelude::WebColors;
 use iris_ui::button::{make_button, make_full_button};
 use iris_ui::geom::{Bounds, Insets, Point as GPoint};
-use iris_ui::scene::{click_at, draw_scene, event_at_focused, layout_scene, Scene};
+use iris_ui::scene::{Scene, click_at, draw_scene, event_at_focused, layout_scene};
 use iris_ui::toggle_button::make_toggle_button;
-use iris_ui::toggle_group::{layout_toggle_group, make_toggle_group, SelectOneOfState};
-use iris_ui::{util, FontKind, Theme, ViewStyle, BW_THEME};
+use iris_ui::toggle_group::{SelectOneOfState, layout_toggle_group, make_toggle_group};
+use iris_ui::{BW_THEME, FontKind, Theme, ViewStyle, util};
 use std::convert::Into;
 
+use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
 use embedded_graphics::prelude::*;
 use embedded_graphics_simulator::sdl2::{Keycode, Mod};
-use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
 use embedded_graphics_simulator::{
     BinaryColorTheme, OutputSettings, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent,
     Window,
 };
 use env_logger::Target;
 use iris_ui::device::{EmbeddedDrawingContext, FromRgb565};
-use iris_ui::grid::{make_grid_panel, GridLayoutState, LayoutConstraint};
+use iris_ui::grid::{GridLayoutState, LayoutConstraint, make_grid_panel};
 use iris_ui::input::{InputEvent, InputResult, OutputAction, TextAction};
 use iris_ui::label::{make_header_label, make_label};
 use iris_ui::layouts::{layout_hbox, layout_std_panel, layout_vbox};
 use iris_ui::list_view::make_list_view;
-use iris_ui::panel::{draw_std_panel, make_panel, PanelState};
-use iris_ui::tabbed_panel::{make_tabbed_panel, LayoutPanelState};
+use iris_ui::panel::{PanelState, draw_std_panel, make_panel};
+use iris_ui::tabbed_panel::{LayoutPanelState, make_tabbed_panel};
 use iris_ui::text_input::make_text_input;
 use iris_ui::util::hex_str_to_rgb565;
 use iris_ui::view::Align::{Center, Start};
 use iris_ui::view::Flex::{Fixed, Grow, Shrink};
 use iris_ui::view::{Align, View, ViewId};
-use log::{info, LevelFilter};
+use log::{LevelFilter, info};
 
 #[cfg(feature = "ttf")]
 static TTF_FONT: std::sync::OnceLock<Option<fontdue::Font>> = std::sync::OnceLock::new();
@@ -52,9 +52,10 @@ fn get_ttf_font() -> Option<&'static fontdue::Font> {
             ];
             for path in paths {
                 if let Ok(bytes) = std::fs::read(path) {
-                    if let Ok(font) =
-                        fontdue::Font::from_bytes(bytes.as_slice(), fontdue::FontSettings::default())
-                    {
+                    if let Ok(font) = fontdue::Font::from_bytes(
+                        bytes.as_slice(),
+                        fontdue::FontSettings::default(),
+                    ) {
                         info!("loaded TTF font from {path}");
                         return Some(font);
                     }
@@ -205,7 +206,14 @@ fn make_scene(scale: u32) -> Scene {
         let themes_list_id = ViewId::new("themes-list");
         let themes = make_list_view(
             &themes_list_id,
-            vec!["Light", "Dark", "Ice Cream", "Minty Fresh", "Amber", "Black & White"],
+            vec![
+                "Light",
+                "Dark",
+                "Ice Cream",
+                "Minty Fresh",
+                "Amber",
+                "Black & White",
+            ],
             0,
         );
         scene.add_view_to_parent(themes, &panel.name);
@@ -268,7 +276,9 @@ fn run_loop<C>(
         for event in window.events() {
             match event {
                 SimulatorEvent::Quit => break 'running,
-                SimulatorEvent::KeyDown { keycode, keymod, .. } => {
+                SimulatorEvent::KeyDown {
+                    keycode, keymod, ..
+                } => {
                     let act: TextAction = keydown_to_char(keycode, keymod);
                     let evt = InputEvent::Text(act);
                     if let Some(result) = event_at_focused(&mut scene, &evt) {
@@ -285,7 +295,10 @@ fn run_loop<C>(
                 SimulatorEvent::MouseButtonDown { .. } => {
                     println!("mouse down");
                 }
-                SimulatorEvent::MouseWheel { scroll_delta, direction } => {
+                SimulatorEvent::MouseWheel {
+                    scroll_delta,
+                    direction,
+                } => {
                     info!("mouse wheel {scroll_delta:?} {direction:?}");
                     if let Some(result) = event_at_focused(
                         &mut scene,

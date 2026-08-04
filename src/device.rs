@@ -150,8 +150,7 @@ fn draw_ttf_glyphs<T: DrawTarget>(
                     // row=0 is the top of the bitmap; ymin is the signed distance
                     // from the baseline to the bottom of the glyph bounding box.
                     let py = baseline_y - metrics.ymin - metrics.height as i32 + row as i32;
-                    let _ = display
-                        .draw_iter(core::iter::once(Pixel(EPoint::new(px, py), color)));
+                    let _ = display.draw_iter(core::iter::once(Pixel(EPoint::new(px, py), color)));
                 }
             }
         }
@@ -200,9 +199,7 @@ where
         match text_style.font {
             FontKind::Bitmap(mono_font) => {
                 let c = T::Color::from_rgb565(*text_style.color);
-                let mut text_builder = MonoTextStyleBuilder::new()
-                    .font(&mono_font)
-                    .text_color(c);
+                let mut text_builder = MonoTextStyleBuilder::new().font(&mono_font).text_color(c);
                 if text_style.underline {
                     text_builder = text_builder.underline();
                 }
@@ -224,7 +221,10 @@ where
                 } else {
                     let s = self.scale as i32;
                     let clipped = self.display.clipped(&bounds_to_rect(&self.clip));
-                    let mut scaled = ScaledDisplay { inner: clipped, scale: self.scale };
+                    let mut scaled = ScaledDisplay {
+                        inner: clipped,
+                        scale: self.scale,
+                    };
                     let logical_offset = EPoint::new(self.offset.x / s, self.offset.y / s);
                     let mut display = scaled.translated(logical_offset);
                     let mut pt = EPoint::new(bounds.position.x, bounds.position.y);
@@ -269,7 +269,10 @@ where
                 } else {
                     let s = self.scale as i32;
                     let clipped = self.display.clipped(&bounds_to_rect(&self.clip));
-                    let mut scaled = ScaledDisplay { inner: clipped, scale: self.scale };
+                    let mut scaled = ScaledDisplay {
+                        inner: clipped,
+                        scale: self.scale,
+                    };
                     let logical_offset = EPoint::new(self.offset.x / s, self.offset.y / s);
                     let mut display = scaled.translated(logical_offset);
                     draw_ttf_glyphs(&mut display, text, font, size, start_x, baseline_y, color);
@@ -282,9 +285,7 @@ where
         match style.font {
             FontKind::Bitmap(mono_font) => {
                 let c = T::Color::from_rgb565(*style.color);
-                let mut text_builder = MonoTextStyleBuilder::new()
-                    .font(&mono_font)
-                    .text_color(c);
+                let mut text_builder = MonoTextStyleBuilder::new().font(&mono_font).text_color(c);
                 if style.underline {
                     text_builder = text_builder.underline();
                 }
@@ -298,17 +299,30 @@ where
                     let mut display = self.display.clipped(&bounds_to_rect(&self.clip));
                     let mut display = display.translated(self.offset);
                     let pt = EPoint::new(position.x, position.y);
-                    let _ = Text { position: pt, text, character_style: estyle, text_style }
-                        .draw(&mut display);
+                    let _ = Text {
+                        position: pt,
+                        text,
+                        character_style: estyle,
+                        text_style,
+                    }
+                    .draw(&mut display);
                 } else {
                     let s = self.scale as i32;
                     let clipped = self.display.clipped(&bounds_to_rect(&self.clip));
-                    let mut scaled = ScaledDisplay { inner: clipped, scale: self.scale };
+                    let mut scaled = ScaledDisplay {
+                        inner: clipped,
+                        scale: self.scale,
+                    };
                     let logical_offset = EPoint::new(self.offset.x / s, self.offset.y / s);
                     let mut display = scaled.translated(logical_offset);
                     let pt = EPoint::new(position.x, position.y);
-                    let _ = Text { position: pt, text, character_style: estyle, text_style }
-                        .draw(&mut display);
+                    let _ = Text {
+                        position: pt,
+                        text,
+                        character_style: estyle,
+                        text_style,
+                    }
+                    .draw(&mut display);
                 }
             }
 
@@ -346,7 +360,10 @@ where
                 } else {
                     let s = self.scale as i32;
                     let clipped = self.display.clipped(&bounds_to_rect(&self.clip));
-                    let mut scaled = ScaledDisplay { inner: clipped, scale: self.scale };
+                    let mut scaled = ScaledDisplay {
+                        inner: clipped,
+                        scale: self.scale,
+                    };
                     let logical_offset = EPoint::new(self.offset.x / s, self.offset.y / s);
                     let mut display = scaled.translated(logical_offset);
                     draw_ttf_glyphs(&mut display, text, font, size, cursor_x, baseline_y, color);
@@ -369,7 +386,10 @@ where
         } else {
             let s = self.scale as i32;
             let clipped = self.display.clipped(&bounds_to_rect(&self.clip));
-            let mut scaled = ScaledDisplay { inner: clipped, scale: self.scale };
+            let mut scaled = ScaledDisplay {
+                inner: clipped,
+                scale: self.scale,
+            };
             let logical_offset = EPoint::new(self.offset.x / s, self.offset.y / s);
             let mut display = scaled.translated(logical_offset);
             let _ = display.draw_iter(core::iter::once(Pixel(EPoint::new(x, y), c)));

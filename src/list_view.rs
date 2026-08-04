@@ -143,6 +143,8 @@ fn layout_list(e: &mut LayoutEvent) {
         }
     }
 }
+
+#[cfg(test)]
 mod tests {
     use crate::geom::{Bounds, Point};
     use crate::list_view::{ListState, make_list_view};

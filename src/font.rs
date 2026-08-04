@@ -32,9 +32,7 @@ impl FontKind {
         match self {
             FontKind::Bitmap(f) => f.character_size.width as i32,
             #[cfg(feature = "ttf")]
-            FontKind::TrueType { font, size } => {
-                font.metrics('M', *size).advance_width as i32
-            }
+            FontKind::TrueType { font, size } => font.metrics('M', *size).advance_width as i32,
         }
     }
 

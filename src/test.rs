@@ -86,7 +86,9 @@ impl DrawingContext for MockDrawingContext {
                 pt.y += (mono_font.baseline as i32) / 2;
                 let w = mono_font.character_size.width as i32 * text.len() as i32;
                 pt.x += (bounds.size.w - w) / 2;
-                Text::new(text, pt, mono_style).draw(&mut self.display).unwrap();
+                Text::new(text, pt, mono_style)
+                    .draw(&mut self.display)
+                    .unwrap();
             }
             #[cfg(feature = "ttf")]
             FontKind::TrueType { .. } => {

@@ -194,6 +194,7 @@ impl Into<ViewId> for &'static str {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use crate::button::make_button;
     use crate::geom::Bounds;

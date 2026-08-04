@@ -17,7 +17,10 @@ pub fn calc_size(font: FontKind, title: &str) -> Size {
     let ch = font.char_height();
     let width = font.str_width(title) + cw * 2;
     let height = ch + (ch / 2) * 2;
-    Size { w: width, h: height }
+    Size {
+        w: width,
+        h: height,
+    }
 }
 
 pub fn bounds_to_rect(bounds: &Bounds) -> Rectangle {

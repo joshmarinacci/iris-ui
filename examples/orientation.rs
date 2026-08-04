@@ -11,13 +11,13 @@
 /// Run with:
 ///   cargo run --example orientation --features std
 use embedded_graphics::geometry::Dimensions;
-use embedded_graphics::mono_font::{ascii::FONT_6X10, MonoTextStyleBuilder};
+use embedded_graphics::mono_font::{MonoTextStyleBuilder, ascii::FONT_6X10};
 use embedded_graphics::pixelcolor::Rgb565;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{Circle, Line, PrimitiveStyle, Rectangle};
 use embedded_graphics::text::Text;
 use embedded_graphics_simulator::{
-    sdl2::Keycode, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
+    OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window, sdl2::Keycode,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -104,15 +104,16 @@ impl<'a, D: DrawTarget<Color = Rgb565>> DrawTarget for RotatedDisplay<'a, D> {
         let rotation = self.rotation;
         let phys_w = self.phys_w;
         let phys_h = self.phys_h;
-        self.inner.draw_iter(pixels.into_iter().map(move |Pixel(p, c)| {
-            let q = match rotation {
-                Rotation::Rotate0 => p,
-                Rotation::Rotate90 => Point::new(phys_w - 1 - p.y, p.x),
-                Rotation::Rotate180 => Point::new(phys_w - 1 - p.x, phys_h - 1 - p.y),
-                Rotation::Rotate270 => Point::new(p.y, phys_h - 1 - p.x),
-            };
-            Pixel(q, c)
-        }))
+        self.inner
+            .draw_iter(pixels.into_iter().map(move |Pixel(p, c)| {
+                let q = match rotation {
+                    Rotation::Rotate0 => p,
+                    Rotation::Rotate90 => Point::new(phys_w - 1 - p.y, p.x),
+                    Rotation::Rotate180 => Point::new(phys_w - 1 - p.x, phys_h - 1 - p.y),
+                    Rotation::Rotate270 => Point::new(p.y, phys_h - 1 - p.x),
+                };
+                Pixel(q, c)
+            }))
     }
 }
 
@@ -130,10 +131,13 @@ fn draw_content(
     let h = bb.size.height as i32;
 
     // Outer border
-    Rectangle::new(Point::new(2, 2), Size::new(bb.size.width - 4, bb.size.height - 4))
-        .into_styled(PrimitiveStyle::with_stroke(Rgb565::BLACK, 2))
-        .draw(display)
-        .unwrap();
+    Rectangle::new(
+        Point::new(2, 2),
+        Size::new(bb.size.width - 4, bb.size.height - 4),
+    )
+    .into_styled(PrimitiveStyle::with_stroke(Rgb565::BLACK, 2))
+    .draw(display)
+    .unwrap();
 
     // Red square in the top-left — always marks the logical origin
     Rectangle::new(Point::new(5, 5), Size::new(40, 40))
@@ -180,7 +184,10 @@ fn main() {
         for event in window.events() {
             match event {
                 SimulatorEvent::Quit => break 'running,
-                SimulatorEvent::KeyDown { keycode: Keycode::R, .. } => {
+                SimulatorEvent::KeyDown {
+                    keycode: Keycode::R,
+                    ..
+                } => {
                     rotation = rotation.next();
                 }
                 _ => {}

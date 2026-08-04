@@ -81,7 +81,7 @@ pub fn layout_vbox(pass: &mut LayoutEvent) {
             kid.bounds.position.x = match &kid.h_align {
                 Start => 0,
                 Center => (avail_w - kid.bounds.size.w) / 2,
-                End => avail_w - kid.bounds.size.w ,
+                End => avail_w - kid.bounds.size.w,
             } + padding.left;
             kid.bounds.position.y = y;
             y += kid.bounds.size.h + gap;
@@ -182,7 +182,7 @@ pub fn layout_hbox(pass: &mut LayoutEvent) {
             kid.bounds.position.y = match &kid.v_align {
                 Start => 0,
                 Center => (avail_h - kid.bounds.size.h) / 2,
-                End => avail_h - kid.bounds.size.h ,
+                End => avail_h - kid.bounds.size.h,
             } + padding.top;
         }
     }
@@ -464,7 +464,10 @@ pub(crate) mod tests {
         assert_eq!(view_bounds(&scene, &child2_id).position, Point::new(10, 20));
         assert_eq!(view_bounds(&scene, &child2_id).size, Size::new(180, 80));
         // child3: bottom fixed child, pushed below child2
-        assert_eq!(view_bounds(&scene, &child3_id).position, Point::new(10, 100));
+        assert_eq!(
+            view_bounds(&scene, &child3_id).position,
+            Point::new(10, 100)
+        );
         assert_eq!(view_bounds(&scene, &child3_id).size, Size::new(30, 10));
     }
 }

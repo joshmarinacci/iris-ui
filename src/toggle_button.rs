@@ -71,6 +71,7 @@ fn layout_toggle_button(event: &mut LayoutEvent) {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use crate::geom::{Bounds, Point};
     use crate::scene::{Scene, click_at, draw_scene, layout_scene};

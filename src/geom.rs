@@ -213,7 +213,12 @@ impl Bounds {
     }
     pub fn scaled(&self, scale: u32) -> Bounds {
         let s = scale as i32;
-        Bounds::new(self.position.x * s, self.position.y * s, self.size.w * s, self.size.h * s)
+        Bounds::new(
+            self.position.x * s,
+            self.position.y * s,
+            self.size.w * s,
+            self.size.h * s,
+        )
     }
 }
 impl Default for Bounds {
