@@ -155,7 +155,7 @@ mod tests {
         layout_scene(&mut scene, &theme);
 
         {
-            let mut group = scene.get_view_mut(&ViewId::new("group")).unwrap();
+            let group = scene.get_view_mut(&ViewId::new("group")).unwrap();
             assert_eq!(group.name.as_str(), "group");
             assert_eq!(group.bounds, Bounds::new(0, 0, 100, 13 + 7));
             let state = &mut group.get_state::<SelectOneOfState>().unwrap();

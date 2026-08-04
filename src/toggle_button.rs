@@ -90,7 +90,7 @@ mod tests {
         layout_scene(&mut scene, &theme);
 
         {
-            let mut button = scene.get_view_mut(&ViewId::new("toggle")).unwrap();
+            let button = scene.get_view_mut(&ViewId::new("toggle")).unwrap();
             assert_eq!(button.name, ViewId::new("toggle"));
             let cw = theme.font.char_width();
             let ch = theme.font.char_height();

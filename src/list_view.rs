@@ -164,7 +164,7 @@ mod tests {
         layout_scene(&mut scene, &theme);
 
         {
-            let mut group = scene.get_view_mut(&listview).unwrap();
+            let group = scene.get_view_mut(&listview).unwrap();
             let state = &mut group.get_state::<ListState>().unwrap();
             assert_eq!(state.selected, 0);
         }
