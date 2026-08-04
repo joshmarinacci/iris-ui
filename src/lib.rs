@@ -129,6 +129,7 @@ pub const BW_THEME: Theme = Theme {
 mod tests {
     use super::*;
     use crate::button::make_button;
+    use crate::geom::Point;
     use crate::gfx::TextStyle;
     use crate::input::TextAction;
     use crate::scene::{click_at, draw_scene, event_at_focused, pick_at};

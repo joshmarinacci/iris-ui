@@ -221,7 +221,7 @@ pub fn layout_std_panel(pass: &mut LayoutEvent) {
 pub(crate) mod tests {
     use crate::LayoutEvent;
     use crate::geom::{Bounds, Insets, Point, Size};
-    use crate::layouts::{layout_std_panel, layout_vbox};
+    use crate::layouts::{layout_hbox, layout_std_panel, layout_vbox};
     use crate::panel::PanelState;
     use crate::scene::{Scene, layout_scene};
     use crate::test::MockDrawingContext;
@@ -388,6 +388,87 @@ pub(crate) mod tests {
                 view.bounds.size.h = layout.space.h;
             }
         }
+    }
+
+    #[test]
+    fn test_hbox_fixed_width() {
+        let mut scene = Scene::new();
+        let parent_id: ViewId = "parent".into();
+        // fixed 200 px wide parent
+        let parent_view = View {
+            name: parent_id.clone(),
+            state: Some(Box::new(PanelState {
+                border_visible: false,
+                padding: Insets::new_same(10),
+                gap: 0,
+            })),
+            bounds: Bounds {
+                position: Point::new(0, 0),
+                size: Size::new(200, 60),
+            },
+            h_flex: Flex::Fixed,
+            v_flex: Flex::Grow,
+            layout: Some(layout_hbox),
+            ..Default::default()
+        };
+
+        let child1_id: ViewId = "child1".into();
+        scene.add_view_to_parent(
+            View {
+                name: child1_id.clone(),
+                title: "abc".into(),
+                v_align: Start,
+                layout: Some(layout_button),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+
+        // middle child grows to fill remaining horizontal space
+        let child2_id: ViewId = "child2".into();
+        scene.add_view_to_parent(
+            View {
+                name: child2_id.clone(),
+                v_align: Start,
+                h_flex: Flex::Grow,
+                v_flex: Flex::Grow,
+                layout: Some(layout_fill),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+
+        let child3_id: ViewId = "child3".into();
+        scene.add_view_to_parent(
+            View {
+                name: child3_id.clone(),
+                title: "abc".into(),
+                v_align: Start,
+                layout: Some(layout_button),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+
+        scene.add_view_to_parent(parent_view, &scene.root_id());
+
+        let theme = MockDrawingContext::make_mock_theme();
+        layout_scene(&mut scene, &theme);
+
+        // panel keeps its fixed width of 200; height grows to fill scene
+        assert_eq!(view_bounds(&scene, &parent_id).size, Size::new(200, 200));
+        // child1: left fixed child, inset by padding
+        assert_eq!(view_bounds(&scene, &child1_id).position, Point::new(10, 10));
+        assert_eq!(view_bounds(&scene, &child1_id).size, Size::new(30, 10));
+        // child2: fills (200 - 2*10 padding - 2*10 double padding - child1.w - child3.w) = 100 horizontally
+        assert_eq!(view_bounds(&scene, &child2_id).position, Point::new(40, 10));
+        assert_eq!(view_bounds(&scene, &child2_id).size, Size::new(100, 180));
+        // child3: right fixed child, placed after child2
+        assert_eq!(
+            view_bounds(&scene, &child3_id).position,
+            Point::new(140, 10)
+        );
+        assert_eq!(view_bounds(&scene, &child3_id).size, Size::new(30, 10));
     }
 
     #[test]
