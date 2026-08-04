@@ -7,10 +7,9 @@ use crate::geom::Size;
 use crate::input::{InputEvent, OutputAction};
 use crate::scene::Scene;
 use crate::view::ViewId;
-use alloc::string::String;
 use embedded_graphics::mono_font::ascii::{FONT_7X13, FONT_7X13_BOLD};
 use embedded_graphics::pixelcolor::{Rgb565, RgbColor};
-use geom::{Bounds, Point};
+use geom::Bounds;
 use gfx::DrawingContext;
 use view::View;
 

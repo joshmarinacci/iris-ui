@@ -1,6 +1,6 @@
 use crate::geom::Bounds;
 use crate::gfx::TextStyle;
-use crate::input::{InputEvent, InputResult, OutputAction, TextAction};
+use crate::input::{InputEvent, OutputAction, TextAction};
 use crate::view::{Align, View, ViewId};
 use crate::{DrawEvent, GuiEvent};
 use alloc::boxed::Box;

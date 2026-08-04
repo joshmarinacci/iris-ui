@@ -81,7 +81,7 @@ pub fn layout_vbox(pass: &mut LayoutEvent) {
             kid.bounds.position.x = match &kid.h_align {
                 Start => 0,
                 Center => (avail_w - kid.bounds.size.w) / 2,
-                End => (avail_w - kid.bounds.size.w),
+                End => avail_w - kid.bounds.size.w ,
             } + padding.left;
             kid.bounds.position.y = y;
             y += kid.bounds.size.h + gap;
@@ -182,7 +182,7 @@ pub fn layout_hbox(pass: &mut LayoutEvent) {
             kid.bounds.position.y = match &kid.v_align {
                 Start => 0,
                 Center => (avail_h - kid.bounds.size.h) / 2,
-                End => (avail_h - kid.bounds.size.h),
+                End => avail_h - kid.bounds.size.h ,
             } + padding.top;
         }
     }
