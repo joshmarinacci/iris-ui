@@ -48,6 +48,9 @@ pub fn input_toggle_group(e: &mut GuiEvent) -> Option<OutputAction> {
             if let Some(view) = e.scene.get_view_mut(e.target) {
                 let bounds = view.bounds;
                 if let Some(state) = view.get_state::<SelectOneOfState>() {
+                    if state.items.is_empty() {
+                        return None;
+                    }
                     let cell_width = bounds.size.w / (state.items.len() as i32);
                     let x = pt.x - bounds.x();
                     let n = x / cell_width;
@@ -68,6 +71,9 @@ fn draw_toggle_group(e: &mut DrawEvent) {
     e.ctx.fill_rect(&e.view.bounds, &e.theme.standard.fill);
     let name = e.view.name.clone();
     if let Some(state) = e.view.get_state::<SelectOneOfState>() {
+        if state.items.is_empty() {
+            return;
+        }
         let cell_width = bounds.size.w / (state.items.len() as i32);
         for (i, item) in state.items.iter().enumerate() {
             let style = if i == state.selected {
@@ -145,6 +151,22 @@ mod tests {
     use crate::toggle_group::{SelectOneOfState, make_toggle_group};
     use crate::view::ViewId;
     use alloc::vec;
+
+    #[test]
+    fn test_toggle_group_empty_no_panic() {
+        let theme = MockDrawingContext::make_mock_theme();
+        let mut scene: Scene = Scene::new_with_bounds(Bounds::new(0, 0, 100, 240));
+        {
+            let group = make_toggle_group(&ViewId::new("group"), vec![], 0);
+            scene.add_view_to_root(group);
+        }
+        layout_scene(&mut scene, &theme);
+        // tap should not panic
+        click_at(&mut scene, &vec![], Point::new(50, 10));
+        // draw should not panic
+        let mut ctx = MockDrawingContext::new(&scene);
+        draw_scene(&mut scene, &mut ctx, &theme);
+    }
 
     #[test]
     fn test_toggle_group() {

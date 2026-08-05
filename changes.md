@@ -1,3 +1,11 @@
+## 2026-08-05
+
+Fixed crash/panic risks from code review issues #1 and #2:
+
+- `toggle_group.rs` `input_toggle_group` / `draw_toggle_group`: added `is_empty()` early-return guard before `bounds.size.w / items.len()` division to prevent divide-by-zero on an empty items list.
+- `list_view.rs` `TextAction::Enter` path: replaced unchecked `items[state.selected]` with `items.get(state.selected)` so a stale `selected` index (e.g. after external truncation) cannot panic.
+- Added regression tests: `test_toggle_group_empty_no_panic` and `test_list_view_enter_with_stale_selected_no_panic`.
+
 ## 2026-08-04 (2)
 
 Fixed remaining crash paths in `list_view.rs` when the list is empty or has zero-height cells:

@@ -91,11 +91,9 @@ fn input_list(e: &mut GuiEvent) -> Option<OutputAction> {
                     TextAction::Up => state.select_prev(),
                     TextAction::Down => state.select_next(),
                     TextAction::Enter => {
-                        if !state.items.is_empty() {
+                        if let Some(item) = state.items.get(state.selected) {
                             info!("firmly selecting the item");
-                            return Some(OutputAction::Command(
-                                state.items[state.selected].clone(),
-                            ));
+                            return Some(OutputAction::Command(item.clone()));
                         }
                     }
                     _ => {}
@@ -166,6 +164,29 @@ mod tests {
     use crate::test::MockDrawingContext;
     use crate::view::ViewId;
     use alloc::vec;
+
+    #[test]
+    fn test_list_view_enter_with_stale_selected_no_panic() {
+        use crate::input::{InputEvent, TextAction};
+        use crate::scene::event_at_focused;
+        let theme = MockDrawingContext::make_mock_theme();
+        let mut scene: Scene = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
+        let listview = ViewId::new("listview");
+        {
+            let list = make_list_view(&listview, vec!["A", "B", "C"], 2);
+            scene.add_view_to_root(list);
+        }
+        layout_scene(&mut scene, &theme);
+        scene.set_focused(&listview);
+        // Shrink items so selected index (2) is now out of bounds
+        {
+            let view = scene.get_view_mut(&listview).unwrap();
+            let state = view.get_state::<ListState>().unwrap();
+            state.items.truncate(1);
+        }
+        // Enter should not panic
+        event_at_focused(&mut scene, &InputEvent::Text(TextAction::Enter));
+    }
 
     #[test]
     fn test_list_view() {
