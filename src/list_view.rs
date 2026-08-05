@@ -6,7 +6,6 @@ use crate::{DrawEvent, GuiEvent, LayoutEvent};
 use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
-use core::any::Any;
 use core::option::Option::Some;
 use log::info;
 
@@ -14,7 +13,7 @@ pub fn make_list_view(name: &ViewId, data: Vec<&str>, selected: usize) -> View {
     View {
         name: name.clone(),
         title: name.to_string(),
-        state: Some(ListState::new_with(data, selected)),
+        state: Some(Box::new(ListState::new_with(data, selected))),
         input: Some(input_list),
         layout: Some(layout_list),
         draw: Some(draw_list),
@@ -41,11 +40,11 @@ impl ListState {
 }
 
 impl ListState {
-    pub fn new_with(items: Vec<&str>, selected: usize) -> Box<dyn Any> {
-        Box::new(ListState {
+    pub fn new_with(items: Vec<&str>, selected: usize) -> Self {
+        ListState {
             items: items.iter().map(|s| s.to_string()).collect(),
             selected,
-        })
+        }
     }
 }
 

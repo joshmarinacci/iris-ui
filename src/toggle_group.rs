@@ -7,7 +7,6 @@ use crate::{DrawEvent, GuiEvent, LayoutEvent};
 use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
-use core::any::Any;
 use core::option::Option::Some;
 
 pub fn make_toggle_group(name: &ViewId, data: Vec<&str>, selected: usize) -> View {
@@ -15,7 +14,7 @@ pub fn make_toggle_group(name: &ViewId, data: Vec<&str>, selected: usize) -> Vie
         name: name.clone(),
         title: name.to_string(),
         bounds: Bounds::new(0, 0, (data.len() * 60) as i32, 30),
-        state: Some(SelectOneOfState::new_with(data, selected)),
+        state: Some(Box::new(SelectOneOfState::new_with(data, selected))),
         input: Some(input_toggle_group),
         layout: Some(layout_toggle_group),
         draw: Some(draw_toggle_group),
@@ -32,11 +31,11 @@ pub struct SelectOneOfState {
 }
 
 impl SelectOneOfState {
-    pub fn new_with(items: Vec<&str>, selected: usize) -> Box<dyn Any> {
-        Box::new(SelectOneOfState {
+    pub fn new_with(items: Vec<&str>, selected: usize) -> Self {
+        SelectOneOfState {
             items: items.iter().map(|s| s.to_string()).collect(),
             selected,
-        })
+        }
     }
 }
 

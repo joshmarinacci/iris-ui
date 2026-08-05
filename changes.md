@@ -1,3 +1,11 @@
+## 2026-08-05 (4)
+
+API design fixes from code review issues #14–#16:
+
+- **#14**: `make_label`, `make_header_label` (`label.rs`) and `make_text_input` (`text_input.rs`) now accept `name: &ViewId` instead of `name: &'static str`, matching every other widget constructor. Updated all call sites in `grid.rs` tests and `examples/simulator.rs`.
+- **#15**: `ListState::new_with` and `SelectOneOfState::new_with` now return `Self` instead of `Box<dyn Any>`. Boxing moved to the call site in `make_list_view` and `make_toggle_group`. Removed now-unused `core::any::Any` imports from both files.
+- **#16**: `PanelState` gains an explicit `impl Default` (`border_visible` cannot derive because its default is `true`). `SelectedState` gains `#[derive(Default)]`. Both keep their `new()` methods as thin delegates to `default()`.
+
 ## 2026-08-05 (3)
 
 Idiomatic Rust cleanups from code review issues #7–#13:

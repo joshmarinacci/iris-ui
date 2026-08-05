@@ -9,13 +9,19 @@ pub struct PanelState {
     pub padding: Insets,
 }
 
-impl PanelState {
-    pub fn new() -> PanelState {
+impl Default for PanelState {
+    fn default() -> Self {
         PanelState {
             gap: 0,
             border_visible: true,
             padding: Insets::new_same(0),
         }
+    }
+}
+
+impl PanelState {
+    pub fn new() -> PanelState {
+        Self::default()
     }
 }
 

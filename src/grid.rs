@@ -209,19 +209,19 @@ mod tests {
 
         let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
 
-        let mut label1 = make_label("label1", "Label 1");
+        let mut label1 = make_label(&ViewId::new("label1"), "Label 1");
         label1.h_align = Start;
         label1.v_align = Start;
         grid_layout.place_at_row_column(&label1.name, 0, 0);
         scene.add_view_to_parent(label1, &grid.name);
 
-        let mut label2 = make_label("label2", "Label 2");
+        let mut label2 = make_label(&ViewId::new("label2"), "Label 2");
         label2.h_align = Start;
         label2.v_align = Start;
         grid_layout.place_at_row_column(&label2.name, 0, 1);
         scene.add_view_to_parent(label2, &grid.name);
 
-        let mut label3 = make_label("label3", "Label 3");
+        let mut label3 = make_label(&ViewId::new("label3"), "Label 3");
         label3.h_align = Start;
         label3.v_align = Start;
         grid_layout.place_at_row_column(&label3.name, 1, 0);

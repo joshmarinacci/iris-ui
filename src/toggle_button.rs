@@ -17,13 +17,14 @@ pub fn make_toggle_button(name: &ViewId, title: &str) -> View {
     }
 }
 
+#[derive(Default)]
 pub struct SelectedState {
     pub selected: bool,
 }
 
 impl SelectedState {
     pub fn new() -> SelectedState {
-        SelectedState { selected: false }
+        Self::default()
     }
 }
 

@@ -94,11 +94,11 @@ fn make_scene(scale: u32) -> Scene {
         grid_layout.debug = false;
         grid_layout.border_visible = false;
 
-        let header1 = make_header_label("header1", "Header");
+        let header1 = make_header_label(&ViewId::new("header1"), "Header");
         grid_layout.place_at_row_column(&header1.name, 0, 0);
         scene.add_view_to_parent(header1, &grid.name);
 
-        let label1 = make_label("label1", "A Label");
+        let label1 = make_label(&ViewId::new("label1"), "A Label");
         grid_layout.place_at_row_column(&label1.name, 0, 1);
         scene.add_view_to_parent(label1, &grid.name);
 
@@ -132,7 +132,7 @@ fn make_scene(scale: u32) -> Scene {
 
         {
             let col1 = make_column("col1").with_v_flex(Grow); //.with_h_flex(Grow);
-            scene.add_view_to_parent(make_label("vbox-label", "vbox layout"), &col1.name);
+            scene.add_view_to_parent(make_label(&ViewId::new("vbox-label"), "vbox layout"), &col1.name);
             let vbox = make_panel(&ViewId::new("vbox_1")).with_layout(Some(layout_vbox));
             scene.add_view_to_parent(make_button(&ViewId::new("vbox-button1"), "A"), &vbox.name);
             scene.add_view_to_parent(make_button(&ViewId::new("vbox-button2"), "B"), &vbox.name);
@@ -143,7 +143,7 @@ fn make_scene(scale: u32) -> Scene {
 
         {
             let col2 = make_column("col2").with_v_align(Start); //.with_h_flex(Grow);
-            scene.add_view_to_parent(make_label("hbox-label", "hbox layout"), &col2.name);
+            scene.add_view_to_parent(make_label(&ViewId::new("hbox-label"), "hbox layout"), &col2.name);
             let hbox = make_panel(&ViewId::new("hbox_1")).with_layout(Some(layout_hbox));
             scene.add_view_to_parent(make_button(&ViewId::new("hbox-button1"), "A"), &hbox.name);
             scene.add_view_to_parent(make_button(&ViewId::new("hbox-button2"), "B"), &hbox.name);
@@ -166,7 +166,7 @@ fn make_scene(scale: u32) -> Scene {
             .with_layout(Some(layout_hbox));
 
         let col1 = make_column("lists-col1");
-        scene.add_view_to_parent(make_label("lists-label", "Lists"), &col1.name);
+        scene.add_view_to_parent(make_label(&ViewId::new("lists-label"), "Lists"), &col1.name);
         let button = make_full_button(&scene.next_view_id(), "Open Popup", "open-popup", false);
         scene.add_view_to_parent(button, &col1.name);
         scene.add_view_to_parent(col1, &wrapper.name);
@@ -189,7 +189,7 @@ fn make_scene(scale: u32) -> Scene {
             .with_flex(Grow, Grow)
             .with_visible(false);
         scene.add_view_to_parent(
-            make_text_input("text input", "input").position_at(10, 10),
+            make_text_input(&ViewId::new("text input"), "input").position_at(10, 10),
             &panel.name,
         );
         scene.add_view_to_parent(panel, &tabbed_panel.name);

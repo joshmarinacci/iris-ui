@@ -98,17 +98,17 @@ Issues ranked by severity. Check the box when implemented.
 
 ## API Design
 
-- [ ] **14. `label.rs`, `text_input.rs` — take `&'static str` instead of `&ViewId`**
+- [x] **14. `label.rs`, `text_input.rs` — take `&'static str` instead of `&ViewId`**
   Every other widget constructor (`make_button`, `make_panel`, `make_toggle_group`, etc.)
   accepts `name: &ViewId`. These two can't accept runtime-generated names.
   Fix: change signatures to `name: &ViewId`.
 
-- [ ] **15. `list_view.rs` line 44, `toggle_group.rs` line 35 — constructors return `Box<dyn Any>`**
+- [x] **15. `list_view.rs` line 44, `toggle_group.rs` line 35 — constructors return `Box<dyn Any>`**
   `ListState::new_with` and `SelectOneOfState::new_with` erase their own type at construction.
   They should return `Self`; boxing can be done at the call site where
   `Option<Box<dyn Any>>` is needed.
 
-- [ ] **16. `panel.rs`, `toggle_button.rs` — `PanelState::new()` should implement `Default`**
+- [x] **16. `panel.rs`, `toggle_button.rs` — `PanelState::new()` should implement `Default`**
   Both have a no-argument `new()` that creates canonical zero-state. These should use
   `#[derive(Default)]` or an explicit `impl Default` so they work with spread syntax and
   generic bounds.

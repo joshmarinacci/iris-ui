@@ -3,9 +3,9 @@ use crate::util;
 use crate::view::Flex::Shrink;
 use crate::view::{View, ViewId};
 
-pub fn make_label(name: &'static str, title: &str) -> View {
+pub fn make_label(name: &ViewId, title: &str) -> View {
     View {
-        name: ViewId::new(name),
+        name: name.clone(),
         title: title.into(),
         h_flex: Shrink,
         v_flex: Shrink,
@@ -22,9 +22,9 @@ pub fn make_label(name: &'static str, title: &str) -> View {
     }
 }
 
-pub fn make_header_label(name: &'static str, title: &str) -> View {
+pub fn make_header_label(name: &ViewId, title: &str) -> View {
     View {
-        name: ViewId::new(name),
+        name: name.clone(),
         title: title.into(),
         h_flex: Shrink,
         v_flex: Shrink,

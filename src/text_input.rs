@@ -113,9 +113,9 @@ fn input_text_input(event: &mut GuiEvent) -> Option<OutputAction> {
     None
 }
 
-pub fn make_text_input(name: &'static str, title: &str) -> View {
+pub fn make_text_input(name: &ViewId, title: &str) -> View {
     View {
-        name: ViewId::new(name),
+        name: name.clone(),
         title: title.into(),
         bounds: Bounds::new(0, 0, 100, 30),
         visible: true,
