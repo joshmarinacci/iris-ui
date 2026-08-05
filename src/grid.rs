@@ -1,5 +1,5 @@
 use crate::geom::{Bounds, Insets, Point};
-use crate::view::Flex::{Grow, Shrink};
+use crate::view::Flex::Grow;
 use crate::view::{Align, View, ViewId};
 use crate::{DrawEvent, LayoutEvent};
 use alloc::boxed::Box;
@@ -151,11 +151,9 @@ fn layout_grid(pass: &mut LayoutEvent) {
     if view.h_flex == Grow {
         view.bounds.size.w = pass.space.w;
     }
-    if view.h_flex == Shrink {}
     if view.v_flex == Grow {
         view.bounds.size.h = pass.space.h;
     }
-    if view.v_flex == Shrink {}
 
     let parent_bounds = view.bounds.clone();
     let kids = pass.scene.get_children_ids(pass.target);
@@ -188,11 +186,6 @@ fn layout_grid(pass: &mut LayoutEvent) {
     }
 }
 
-impl Into<ViewId> for &'static str {
-    fn into(self) -> ViewId {
-        ViewId::new(self)
-    }
-}
 
 #[cfg(test)]
 mod tests {

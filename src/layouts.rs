@@ -15,9 +15,9 @@ pub fn layout_vbox(pass: &mut LayoutEvent) {
         return;
     };
     let gap = panel_state.gap;
-    let padding = panel_state.padding.clone();
-    let h_flex = parent.h_flex.clone();
-    let v_flex = parent.v_flex.clone();
+    let padding = panel_state.padding;
+    let h_flex = parent.h_flex;
+    let v_flex = parent.v_flex;
     let parent_w = parent.bounds.size.w;
     let parent_h = parent.bounds.size.h;
     let mut available_space: Size = pass.space - padding;
@@ -39,11 +39,11 @@ pub fn layout_vbox(pass: &mut LayoutEvent) {
 
     // calculate total used height
     let kids_sum = fixed_kids.iter().fold(0, |a, id| {
-        return if let Some(view) = pass.scene.get_view_mut(id) {
+        if let Some(view) = pass.scene.get_view_mut(id) {
             view.bounds.size.h + a
         } else {
             a
-        };
+        }
     });
     let vert_leftover = available_space.h - kids_sum;
 
@@ -112,8 +112,8 @@ pub fn layout_hbox(pass: &mut LayoutEvent) {
     let gap = state.gap;
     let padding = state.padding;
 
-    let h_flex = parent.h_flex.clone();
-    let v_flex = parent.v_flex.clone();
+    let h_flex = parent.h_flex;
+    let v_flex = parent.v_flex;
 
     // layout self
     if v_flex == Grow {
@@ -204,7 +204,7 @@ pub fn layout_std_panel(pass: &mut LayoutEvent) {
     let Some(state) = view.get_state::<PanelState>() else {
         return;
     };
-    let padding = state.padding.clone();
+    let padding = state.padding;
 
     if view.v_flex == Grow {
         view.bounds.size.h = pass.space.h;
@@ -212,7 +212,7 @@ pub fn layout_std_panel(pass: &mut LayoutEvent) {
     if view.h_flex == Grow {
         view.bounds.size.w = pass.space.w;
     }
-    let space = view.bounds.size.clone() - padding;
+    let space = view.bounds.size - padding;
     pass.layout_all_children(&pass.target.clone(), space);
 }
 

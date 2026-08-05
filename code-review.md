@@ -52,7 +52,7 @@ Issues ranked by severity. Check the box when implemented.
 
 ## Idiomatic Rust / Anti-patterns
 
-- [ ] **7. `scene.rs` lines 63–67, 370–373 — `is_some()` + `unwrap()` pairs**
+- [x] **7. `scene.rs` lines 63–67, 370–373 — `is_some()` + `unwrap()` pairs**
   ```rust
   // current:
   if self.focused.is_some() {
@@ -63,15 +63,15 @@ Issues ranked by severity. Check the box when implemented.
   ```
   Triggers `clippy::unnecessary_unwrap`. Appears in `set_focused` and `event_at_focused`.
 
-- [ ] **8. `scene.rs` line 341 — `&Vec<Callback>` parameter should be `&[Callback]`**
+- [x] **8. `scene.rs` line 341 — `&Vec<Callback>` parameter should be `&[Callback]`**
   The function only iterates; `&[T]` is the idiomatic slice reference.
   Triggers `clippy::ptr_arg`.
 
-- [ ] **9. `scene.rs` lines 139–147 — `.map(...).flatten()` should be `.filter_map(...)`**
+- [x] **9. `scene.rs` lines 139–147 — `.map(...).flatten()` should be `.filter_map(...)`**
   `.map(f).flatten()` where `f` returns `Option` is exactly what `.filter_map(f)` does.
   Triggers `clippy::map_flatten`.
 
-- [ ] **10. `grid.rs` lines 191–195 — `Into` impl instead of `From`, placed in wrong module**
+- [x] **10. `grid.rs` lines 191–195 — `Into` impl instead of `From`, placed in wrong module**
   ```rust
   // current (in grid.rs):
   impl Into<ViewId> for &'static str { ... }
@@ -81,16 +81,16 @@ Issues ranked by severity. Check the box when implemented.
   The blanket impl provides `Into` automatically from `From`. Keeping it in `grid.rs` means
   it only applies when `grid` is in scope.
 
-- [ ] **11. `grid.rs` lines 154–158 — empty dead-code `if Shrink {}` branches**
+- [x] **11. `grid.rs` lines 154–158 — empty dead-code `if Shrink {}` branches**
   Two empty `if view.h_flex == Shrink {}` / `if view.v_flex == Shrink {}` blocks do nothing
   and should be removed.
 
-- [ ] **12. `layouts.rs` lines 18–20, 115–116, 207, 215 — `.clone()` on `Copy` types**
+- [x] **12. `layouts.rs` lines 18–20, 115–116, 207, 215 — `.clone()` on `Copy` types**
   `Insets`, `Flex`, `Size`, and `Bounds` all derive `Copy`. Calling `.clone()` on them is
   redundant and misleads readers. Remove the `.clone()` calls on these types throughout
   `layouts.rs`.
 
-- [ ] **13. `layouts.rs` lines 41–46 — `return` inside a `fold` closure**
+- [x] **13. `layouts.rs` lines 41–46 — `return` inside a `fold` closure**
   `return` inside a closure returns from the closure, not the outer function — it works but
   is unusual and misleading. Replace with a direct expression.
 

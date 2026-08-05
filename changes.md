@@ -1,3 +1,15 @@
+## 2026-08-05 (3)
+
+Idiomatic Rust cleanups from code review issues #7–#13:
+
+- **#7**: `scene.rs` `set_focused` and `event_at_focused` — replaced `is_some()` + `unwrap()` pairs with `if let Some(...)`.
+- **#8**: `scene.rs` `click_at` — changed `handlers: &Vec<Callback>` to `handlers: &[Callback]`.
+- **#9**: `scene.rs` `get_children_ids_filtered` — replaced `.map(...).flatten()` with `.filter_map(...)`.
+- **#10**: moved `&'static str → ViewId` conversion from an `impl Into` in `grid.rs` to a proper `impl From<&'static str> for ViewId` in `view.rs` where it applies unconditionally.
+- **#11**: `grid.rs` — removed two empty no-op `if view.h_flex == Shrink {}` / `if view.v_flex == Shrink {}` branches; removed now-unused `Shrink` import.
+- **#12**: `layouts.rs` — removed redundant `.clone()` calls on `Copy` types (`Insets`, `Flex`, `Size`) in `layout_vbox`, `layout_hbox`, and `layout_std_panel`.
+- **#13**: `layouts.rs` `layout_vbox` fold — removed misleading `return` inside the closure (returns from the closure, not the function).
+
 ## 2026-08-05 (2)
 
 Fixed correctness bugs from code review issues #3–#6:

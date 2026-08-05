@@ -29,6 +29,11 @@ impl Display for ViewId {
         write!(f, "{}", self.0)
     }
 }
+impl From<&'static str> for ViewId {
+    fn from(s: &'static str) -> Self {
+        ViewId::new(s)
+    }
+}
 
 /// Indicates if the view grow, shrink, or maintain a fixed size in the specified direction.
 #[derive(PartialEq, Debug, Copy, Clone)]

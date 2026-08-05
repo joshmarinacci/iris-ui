@@ -61,8 +61,7 @@ impl Scene {
     }
     /// Set the focused view.
     pub fn set_focused(&mut self, name: &ViewId) {
-        if self.focused.is_some() {
-            let fo = self.focused.as_ref().unwrap().clone();
+        if let Some(fo) = self.focused.clone() {
             self.mark_dirty_view(&fo);
         }
         self.focused = Some(name.clone());
@@ -138,10 +137,8 @@ impl Scene {
     pub fn get_children_ids_filtered(&self, id: &ViewId, cb: fn(&View) -> bool) -> Vec<ViewId> {
         self.get_children_ids(id)
             .iter()
-            .map(|kid| self.get_view(kid))
-            .flatten()
-            .filter(|v| cb(v)) // WORKS
-            // .filter(cb) // DOESN'T WORK
+            .filter_map(|kid| self.get_view(kid))
+            .filter(|v| cb(v))
             .map(|v| v.name.clone())
             .collect()
     }
@@ -339,7 +336,7 @@ fn layout_root_panel(pass: &mut LayoutEvent) {
 }
 
 /// send a click event to the scene
-pub fn click_at(scene: &mut Scene, handlers: &Vec<Callback>, pt: Point) -> Option<InputResult> {
+pub fn click_at(scene: &mut Scene, handlers: &[Callback], pt: Point) -> Option<InputResult> {
     let targets = pick_at(scene, &pt);
     if let Some((target, pt)) = targets.last() {
         let mut event: GuiEvent = GuiEvent {
@@ -369,8 +366,7 @@ pub fn click_at(scene: &mut Scene, handlers: &Vec<Callback>, pt: Point) -> Optio
 
 /// send a event to the focused element of the scene
 pub fn event_at_focused(scene: &mut Scene, event_type: &InputEvent) -> Option<InputResult> {
-    if scene.focused.is_some() {
-        let focused = scene.focused.as_ref().unwrap().clone();
+    if let Some(focused) = scene.focused.clone() {
         let mut event: GuiEvent = GuiEvent {
             scene,
             target: &focused,
