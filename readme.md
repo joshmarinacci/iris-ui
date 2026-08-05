@@ -57,8 +57,8 @@ handlers, layout, and drawing.
 | `v_align` | start, center, or end    | indicates how the view wants to be aligned vertically                                             |
 | `h_align` | start, center, or end    | indicates how the view wants to be aligned horizontally                                           |
 | `visible` | bool                     |                                                                                                   |
-| `state`   | Option<Box<dyn Any>>     | optional object for the state of the view                                                         |
-| `input`   | Option<InputFn>          | optional input handler function                                                                   |
+| `state`   | Option\<Box\<dyn Any\>\> | optional object for the state of the view                                                         |
+| `input`   | Option\<InputFn\>        | optional input handler function                                                                   |
 | `layout`  | Option<LayoutFn>         | optional layout function                                                                          |
 | `draw`    | Option<DrawFn>           | optional drawing function                                                                         |
 
