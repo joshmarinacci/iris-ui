@@ -1,3 +1,13 @@
+## 2026-08-05 (7)
+
+Fixed gap accounting bug in `layout_hbox` and `layout_vbox`:
+
+Previously, `gap` was applied during the child positioning pass but was never deducted from the space offered to `Grow` children. With N total children and a gap G, the Grow children were collectively given `G × (N−1)` extra pixels, causing them to overflow the container silently.
+
+Fix: before dividing remaining space among Grow children, subtract `gap × (total_children − 1)` in both `layout_hbox` (`avail_horizontal_space`) and `layout_vbox` (`vert_leftover`).
+
+Added two regression tests (`test_hbox_grow_child_accounts_for_gap`, `test_vbox_grow_child_accounts_for_gap`) that were written first to confirm the overflow, then pass after the fix.
+
 ## 2026-08-05 (6)
 
 Minor fixes from code review issues #19–#20:

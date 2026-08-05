@@ -45,7 +45,9 @@ pub fn layout_vbox(pass: &mut LayoutEvent) {
             a
         }
     });
-    let vert_leftover = available_space.h - kids_sum;
+    let total_children = pass.scene.get_children_ids(&pass.target).len() as i32;
+    let total_gap = gap * (total_children - 1).max(0);
+    let vert_leftover = available_space.h - kids_sum - total_gap;
 
     // layout the flex children
     let flex_kids = pass
@@ -141,7 +143,9 @@ pub fn layout_hbox(pass: &mut LayoutEvent) {
         .map(|id| pass.scene.get_view(id))
         .flatten()
         .fold(0, |a, v| v.bounds.size.w + a);
-    let avail_horizontal_space = available_space.w - kids_sum;
+    let total_children = pass.scene.get_children_ids(&pass.target).len() as i32;
+    let total_gap = gap * (total_children - 1).max(0);
+    let avail_horizontal_space = available_space.w - kids_sum - total_gap;
 
     // get the flex children
     let flex_kids = pass
@@ -717,6 +721,117 @@ pub(crate) mod tests {
             Point::new(16, 6), // 6 + 10
             "child2 must be at (padding.left + child1.w, padding.top)"
         );
+    }
+
+    #[test]
+    fn test_hbox_grow_child_accounts_for_gap() {
+        // A Grow child must receive (available_w - shrink_kids_total - gap*(n-1)) not
+        // (available_w - shrink_kids_total), otherwise it overflows the container.
+        let mut scene = Scene::new(); // 200x200
+        let parent_id: ViewId = "parent".into();
+        let parent_view = View {
+            name: parent_id.clone(),
+            state: Some(Box::new(PanelState {
+                border_visible: false,
+                padding: Insets::new_same(0),
+                gap: 10,
+            })),
+            h_flex: Flex::Grow,
+            v_flex: Flex::Grow,
+            layout: Some(layout_hbox),
+            ..Default::default()
+        };
+        let fixed_id: ViewId = "fixed".into();
+        scene.add_view_to_parent(
+            View {
+                name: fixed_id.clone(),
+                title: "ab".into(), // 20px wide
+                layout: Some(layout_button),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+        let grow_id: ViewId = "grow".into();
+        scene.add_view_to_parent(
+            View {
+                name: grow_id.clone(),
+                h_flex: Flex::Grow,
+                v_flex: Flex::Grow,
+                layout: Some(layout_fill),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+        scene.add_view_to_parent(parent_view, &scene.root_id());
+
+        let theme = MockDrawingContext::make_mock_theme();
+        layout_scene(&mut scene, &theme);
+
+        // fixed(20) + gap(10) + grow = 200  →  grow = 170
+        assert_eq!(
+            view_bounds(&scene, &grow_id).size.w,
+            170,
+            "grow child width must not include the gap (was 180 before fix)"
+        );
+        let right_edge =
+            view_bounds(&scene, &grow_id).position.x + view_bounds(&scene, &grow_id).size.w;
+        assert_eq!(right_edge, 200, "grow child must not overflow the container");
+    }
+
+    #[test]
+    fn test_vbox_grow_child_accounts_for_gap() {
+        // Same bug in the vertical direction: vert_leftover must subtract gap*(n-1).
+        let mut scene = Scene::new(); // 200x200
+        let parent_id: ViewId = "parent".into();
+        let parent_view = View {
+            name: parent_id.clone(),
+            state: Some(Box::new(PanelState {
+                border_visible: false,
+                padding: Insets::new_same(0),
+                gap: 10,
+            })),
+            h_flex: Flex::Grow,
+            v_flex: Flex::Grow,
+            layout: Some(layout_vbox),
+            ..Default::default()
+        };
+        let fixed_id: ViewId = "fixed".into();
+        scene.add_view_to_parent(
+            View {
+                name: fixed_id.clone(),
+                title: "a".into(), // 10px tall
+                h_align: Align::Start,
+                layout: Some(layout_button),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+        let grow_id: ViewId = "grow".into();
+        scene.add_view_to_parent(
+            View {
+                name: grow_id.clone(),
+                h_align: Align::Start,
+                h_flex: Flex::Grow,
+                v_flex: Flex::Grow,
+                layout: Some(layout_fill),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+        scene.add_view_to_parent(parent_view, &scene.root_id());
+
+        let theme = MockDrawingContext::make_mock_theme();
+        layout_scene(&mut scene, &theme);
+
+        // fixed(10) + gap(10) + grow = 200  →  grow = 180
+        assert_eq!(
+            view_bounds(&scene, &grow_id).size.h,
+            180,
+            "grow child height must not include the gap (was 190 before fix)"
+        );
+        let bottom_edge =
+            view_bounds(&scene, &grow_id).position.y + view_bounds(&scene, &grow_id).size.h;
+        assert_eq!(bottom_edge, 200, "grow child must not overflow the container");
     }
 
     #[test]
