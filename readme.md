@@ -4,7 +4,7 @@
 
 ## What is This?
 
-Iris a new UI library for no_std embedded Rust. I currently have it running on the ESP32-S3
+Iris a UI library for **no_std** embedded Rust. I currently have it running on the ESP32-S3
 based [Lilygo T-Deck](https://github.com/Xinyuan-LilyGO/T-Deck/tree/master), but it should run on anything that uses
 the [embedded_graphics traits](https://docs.rs/embedded-graphics/latest/embedded_graphics/). It focuses on bandwidth
 limited devices, such as SPI displays.
@@ -47,20 +47,20 @@ Rather than using inheritance, which is a bad fit for Rust, every component / wi
 All views several mandatory fields like name, visible, bounds, etc, as well as optional fields for state, input
 handlers, layout, and drawing.
 
-| Field   | Value                    | Description                                                                                       |
-|---------|--------------------------|---------------------------------------------------------------------------------------------------|
-| name    | string                   | should be unique throughout your application.                                                     | 
-| title   | string                   | Used by buttons as the display text                                                               |
-| bounds  | Bounds (position & size) | should only be modified inside of the layout function                                             |
-| v_flex  | grow, shrink or fixed    | indicates if the view wants itself grow, shrink, or have a fixed size in the vertical direction   |
-| h_flex  | grow, shrink or fixed    | indicates if the view wants itself grow, shrink, or have a fixed size in the horizontal direction |
-| v_align | start, center, or end    | indicates how the view wants to be aligned vertically                                             |
-| h_align | start, center, or end    | indicates how the view wants to be aligned horizontally                                           |
-| visible | bool                     |                                                                                                   |
-| state   | Option<Box<dyn Any>>     | optional object for the state of the view                                                         |
-| input   | Option<InputFn>          | optional input handler function                                                                   |
-| layout  | Option<LayoutFn>         | optional layout function                                                                          |
-| draw    | Option<DrawFn>           | optional drawing function                                                                         |
+| Field     | Value                    | Description                                                                                       |
+|-----------|--------------------------|---------------------------------------------------------------------------------------------------|
+| `name`    | string                   | should be unique throughout your application.                                                     | 
+| `title`   | string                   | Used by buttons as the display text                                                               |
+| `bounds`  | Bounds (position & size) | should only be modified inside of the layout function                                             |
+| `v_flex`  | grow, shrink or fixed    | indicates if the view wants itself grow, shrink, or have a fixed size in the vertical direction   |
+| `h_flex`  | grow, shrink or fixed    | indicates if the view wants itself grow, shrink, or have a fixed size in the horizontal direction |
+| `v_align` | start, center, or end    | indicates how the view wants to be aligned vertically                                             |
+| `h_align` | start, center, or end    | indicates how the view wants to be aligned horizontally                                           |
+| `visible` | bool                     |                                                                                                   |
+| `state`   | Option<Box<dyn Any>>     | optional object for the state of the view                                                         |
+| `input`   | Option<InputFn>          | optional input handler function                                                                   |
+| `layout`  | Option<LayoutFn>         | optional layout function                                                                          |
+| `draw`    | Option<DrawFn>           | optional drawing function                                                                         |
 
 `View`s are rendered using a `Theme` which can be customized for different colors and font sizes. Views carry their own
 internal state using an optional `state` struct. Application state should remain outside the scene/view structure and be
