@@ -1,3 +1,10 @@
+## 2026-08-05 (6)
+
+Minor fixes from code review issues #19–#20:
+
+- **#19**: `Size::empty()` in `geom.rs` now returns `Size { w: 0, h: 0 }` instead of the magic sentinel `Size { w: -99, h: -99 }`. `is_empty()` treats any `w < 1 || h < 1` as empty, so zero is semantically identical but not misleading.
+- **#20**: `TextInputState` cursor methods in `text_input.rs` now navigate by char boundary instead of by byte. `cursor_back` uses `char_indices().next_back()` to find the previous char's byte offset; `cursor_forward` uses `chars().next()` and `len_utf8()` to advance past the current char; `insert_char` advances by `key.len_utf8()`. This prevents panics on multi-byte char boundaries if non-ASCII content reaches the widget.
+
 ## 2026-08-05 (5)
 
 Performance fixes from code review issues #17–#18:

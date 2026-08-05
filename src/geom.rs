@@ -9,7 +9,7 @@ pub struct Size {
 
 impl Size {
     fn empty() -> Size {
-        Size { w: -99, h: -99 }
+        Size { w: 0, h: 0 }
     }
 }
 

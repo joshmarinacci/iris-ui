@@ -131,12 +131,12 @@ Issues ranked by severity. Check the box when implemented.
 
 ## Minor / Design
 
-- [ ] **19. `geom.rs` line 11 — magic `-99` sentinel in `Size::empty()`**
+- [x] **19. `geom.rs` line 11 — magic `-99` sentinel in `Size::empty()`**
   `Size { w: -99, h: -99 }` is indistinguishable from an arithmetic underflow bug.
   `is_empty()` treats any `w < 1 || h < 1` as empty, so `Size { w: 0, h: 0 }` works
   and is less surprising.
   
-- [ ] **20. `text_input.rs` — byte cursor assumes ASCII, no enforcement**
+- [x] **20. `text_input.rs` — byte cursor assumes ASCII, no enforcement**
   `cursor_forward`/`cursor_back` move by 1 byte. `String::insert`/`remove` panic on
   multi-byte character boundaries. `TypedAscii(u8)` keeps this safe today, but there is no
   compile-time or runtime guard. At minimum, add a comment documenting the ASCII-only
