@@ -135,7 +135,7 @@ impl Point {
         Point::new(0, 0)
     }
     pub fn scaled(&self, scale: u32) -> Point {
-        let s = scale as i32;
+        let s = scale.min(i32::MAX as u32) as i32;
         Point::new(self.x * s, self.y * s)
     }
 }
@@ -212,7 +212,7 @@ impl Bounds {
         Bounds { position, size }
     }
     pub fn scaled(&self, scale: u32) -> Bounds {
-        let s = scale as i32;
+        let s = scale.min(i32::MAX as u32) as i32;
         Bounds::new(
             self.position.x * s,
             self.position.y * s,

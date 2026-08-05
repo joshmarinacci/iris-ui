@@ -21,7 +21,7 @@ Issues ranked by severity. Check the box when implemented.
 
 ## Correctness (wrong results, not panics)
 
-- [ ] **3. `layouts.rs` line 144 — hbox reads `.h` instead of `.w` for horizontal flex space**
+- [x] **3. `layouts.rs` line 144 — hbox reads `.h` instead of `.w` for horizontal flex space**
   ```rust
   // current (wrong):
   let avail_horizontal_space = (available_space - padding).h - kids_sum;
@@ -32,19 +32,19 @@ Issues ranked by severity. Check the box when implemented.
   The existing test uses a square 200×200 scene so `w == h` and the bug is invisible.
   On any non-square display (e.g. 320×240) flex children get the wrong width.
 
-- [ ] **4. `scene.rs` lines 290–297 — `move_view_to_parent` doesn't update the `parents` map**
+- [x] **4. `scene.rs` lines 290–297 — `move_view_to_parent` doesn't update the `parents` map**
   The function pushes `child` into the new parent's `children` list but never calls
   `self.parents.insert(child.clone(), parent.clone())`.
   After a move, `get_parent_for_view(child)` still returns the old parent.
   The test only asserts `get_children_ids` length, not the parent side.
 
-- [ ] **5. `scene.rs` lines 299–306 — `remove_parent_and_children` leaks grandchildren**
+- [x] **5. `scene.rs` lines 299–306 — `remove_parent_and_children` leaks grandchildren**
   `self.remove_view(&kid)` only removes from `self.keys`; it does not touch `self.children`
   or `self.parents`. Any grandchildren of a removed child remain as orphaned entries in all
   three maps. Fix: replace the two inner calls with a recursive
   `self.remove_parent_and_children(&kid)`.
 
-- [ ] **6. `geom.rs` lines 138–139, 214–221 — silent `u32 → i32` cast in `scaled()`**
+- [x] **6. `geom.rs` lines 138–139, 214–221 — silent `u32 → i32` cast in `scaled()`**
   `let s = scale as i32` wraps silently if `scale > i32::MAX`.
   Fix: use `scale.min(i32::MAX as u32) as i32` or change the parameter type to `i32`.
 

@@ -460,13 +460,13 @@ pub(crate) mod tests {
         // child1: left fixed child, inset by padding
         assert_eq!(view_bounds(&scene, &child1_id).position, Point::new(10, 10));
         assert_eq!(view_bounds(&scene, &child1_id).size, Size::new(30, 10));
-        // child2: fills (200 - 2*10 padding - 2*10 double padding - child1.w - child3.w) = 100 horizontally
+        // child2: fills (200 - 2*10 padding - child1.w - child3.w) = 120 horizontally
         assert_eq!(view_bounds(&scene, &child2_id).position, Point::new(40, 10));
-        assert_eq!(view_bounds(&scene, &child2_id).size, Size::new(100, 180));
+        assert_eq!(view_bounds(&scene, &child2_id).size, Size::new(120, 180));
         // child3: right fixed child, placed after child2
         assert_eq!(
             view_bounds(&scene, &child3_id).position,
-            Point::new(140, 10)
+            Point::new(160, 10)
         );
         assert_eq!(view_bounds(&scene, &child3_id).size, Size::new(30, 10));
     }

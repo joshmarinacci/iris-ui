@@ -1,3 +1,12 @@
+## 2026-08-05 (2)
+
+Fixed correctness bugs from code review issues #3–#6:
+
+- **#3 (already fixed)**: `layouts.rs` hbox flex space correctly uses `available_space.w` — carried over from the prior "fix hbox layout bug" commit. Updated the `test_hbox_fixed_width` assertion to match correct values (child2 width 120px, child3 x=160).
+- **#4**: `scene.rs` `move_view_to_parent` now also calls `self.parents.insert(child, parent)` so `get_parent_for_view` returns the correct parent after a move. Added assertion to `parent_child` test.
+- **#5**: `scene.rs` `remove_parent_and_children` is now recursive: replaces `remove_view(&kid)` with `remove_parent_and_children(&kid)` so grandchildren are fully cleaned up from all three maps. Added `remove_parent_and_children_cleans_grandchildren` regression test.
+- **#6**: `geom.rs` `Point::scaled` and `Bounds::scaled` now use `scale.min(i32::MAX as u32) as i32` instead of `scale as i32` to avoid silent wrapping on large scale values.
+
 ## 2026-08-05
 
 Fixed crash/panic risks from code review issues #1 and #2:

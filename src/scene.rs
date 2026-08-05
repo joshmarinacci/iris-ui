@@ -294,12 +294,13 @@ impl Scene {
         if let Some(children) = self.children.get_mut(parent) {
             children.push(child.clone());
         }
+        self.parents.insert(child.clone(), parent.clone());
     }
     /// Remove a view and any children from the scene.
     pub fn remove_parent_and_children(&mut self, name: &ViewId) {
         let kids = self.get_children_ids(name);
         for kid in kids {
-            self.remove_view(&kid);
+            self.remove_parent_and_children(&kid);
             self.remove_view_from_parent(name, &kid);
         }
         self.remove_view(name);
@@ -477,6 +478,32 @@ mod tests {
     use crate::view::ViewId;
 
     #[test]
+    fn remove_parent_and_children_cleans_grandchildren() {
+        let mut scene: Scene = Scene::new();
+        let parent_id: ViewId = "parent".into();
+        let child_id: ViewId = "child".into();
+        let grandchild_id: ViewId = "grandchild".into();
+
+        let parent_view = crate::tests::make_simple_view(&parent_id);
+        scene.add_view_to_parent(parent_view, &scene.root_id());
+        let child_view = crate::tests::make_simple_view(&child_id);
+        scene.add_view_to_parent(child_view, &parent_id);
+        let grandchild_view = crate::tests::make_simple_view(&grandchild_id);
+        scene.add_view_to_parent(grandchild_view, &child_id);
+
+        assert_eq!(scene.viewcount(), 4); // root + parent + child + grandchild
+
+        scene.remove_parent_and_children(&parent_id);
+
+        assert_eq!(scene.viewcount(), 1); // only root remains
+        assert!(scene.get_view(&parent_id).is_none());
+        assert!(scene.get_view(&child_id).is_none());
+        assert!(scene.get_view(&grandchild_id).is_none());
+        assert!(scene.get_parent_for_view(&grandchild_id).is_none());
+        assert!(scene.get_parent_for_view(&child_id).is_none());
+    }
+
+    #[test]
     fn basic_add_remove() {
         let mut scene: Scene = Scene::new_with_bounds(Bounds::new(0, 0, 100, 30));
         assert_eq!(scene.viewcount(), 1);
@@ -511,6 +538,7 @@ mod tests {
 
         scene.move_view_to_parent(&child_id, &parent_id);
         assert_eq!(scene.get_children_ids(&parent_id).len(), 1);
+        assert_eq!(scene.get_parent_for_view(&child_id), Some(&parent_id));
         let child2 = crate::tests::make_simple_view(&"child2".into());
         scene.add_view_to_parent(child2, &parent_id);
         assert_eq!(scene.get_children_ids(&parent_id).len(), 2);
