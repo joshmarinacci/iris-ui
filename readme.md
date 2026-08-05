@@ -59,8 +59,8 @@ handlers, layout, and drawing.
 | `visible` | bool                     |                                                                                                   |
 | `state`   | Option\<Box\<dyn Any\>\> | optional object for the state of the view                                                         |
 | `input`   | Option\<InputFn\>        | optional input handler function                                                                   |
-| `layout`  | Option<LayoutFn>         | optional layout function                                                                          |
-| `draw`    | Option<DrawFn>           | optional drawing function                                                                         |
+| `layout`  | Option\<LayoutFn\>       | optional layout function                                                                          |
+| `draw`    | Option\<DrawFn\>         | optional drawing function                                                                         |
 
 `View`s are rendered using a `Theme` which can be customized for different colors and font sizes. Views carry their own
 internal state using an optional `state` struct. Application state should remain outside the scene/view structure and be
