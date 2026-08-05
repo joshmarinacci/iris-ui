@@ -141,7 +141,7 @@ pub fn layout_hbox(pass: &mut LayoutEvent) {
         .map(|id| pass.scene.get_view(id))
         .flatten()
         .fold(0, |a, v| v.bounds.size.w + a);
-    let avail_horizontal_space = (available_space - padding).h - kids_sum;
+    let avail_horizontal_space = available_space.w - kids_sum;
 
     // get the flex children
     let flex_kids = pass
