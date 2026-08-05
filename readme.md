@@ -4,58 +4,71 @@
 
 ## What is This?
 
-Iris a new UI library for no_std embedded Rust. I currently have it running on
-the ESP32-S3 based [Lilygo T-Deck](https://github.com/Xinyuan-LilyGO/T-Deck/tree/master), but it should run on anything
-that uses the [embedded_graphics traits](https://docs.rs/embedded-graphics/latest/embedded_graphics/).
-It focuses on bandwidth limited devices, such as SPI displays.
+Iris a new UI library for no_std embedded Rust. I currently have it running on the ESP32-S3
+based [Lilygo T-Deck](https://github.com/Xinyuan-LilyGO/T-Deck/tree/master), but it should run on anything that uses
+the [embedded_graphics traits](https://docs.rs/embedded-graphics/latest/embedded_graphics/). It focuses on bandwidth
+limited devices, such as SPI displays.
 
 ## Features
 
 * Incremental redrawing using layout and dirty rect tracking.
 * Built in components for buttons, labels, text input, toggles, and panels.
 * Theming with colors and fonts
-* Scene to manage a tree of View structs
+* Scene graph to manage a tree of View structs
 * Fast single pass layout algorithm
 
 ## Anti-Features
 
-* **event loop:** To make it flexible, the lib **does not** impose its own event loop. Instead, the application
-  should send events to the scene and then redraw in its own loop. See [Event Loop](#event-loop) below;
+* **event loop:** To make it flexible, the lib **does not** impose its own event loop. Instead, the application should
+  send events to the scene and then redraw in its own loop. See [Event Loop](#event-loop) below.
 * **animation:** The library has no support for animation or transparency because those will perform horribly on
-  bandwidth
-  limited SPI displays.
+  bandwidth limited SPI displays.
 
 ## Usage
 
 ### Use as a crate
 
-Add the crate `iris-ui` to your `Cargo.toml` file then `use iris_ui::*` in your code. Check
-out the [example code](examples).
+Add the crate `iris-ui` to your `Cargo.toml` file then `use iris_ui::*` in your code. Check out
+the [example code](examples).
 
 ### Building and running locally
 
 Build the library with `cargo build`.
 
-Run the simulator example with `cargo run --example simulator --features std`. Note that
-the simulator needs
+Run the simulator example with `cargo run --example simulator --features std`. Note that the simulator needs
 SDL2. [Install instructions](https://docs.rs/embedded-graphics-simulator/latest/embedded_graphics_simulator/).
 
 Run the unit tests with `cargo test --features std`.
 
-The library has not yet been released as a published crate because I still need
-a name and need to fix some bugs.
-
 ## Views
 
-`View`s are rendered using a `Theme` which can be customized for different
-colors and font sizes. Views carry their own internal state using an
-optional `state` struct. Application state should remain outside the scene/view structure
-and be handled by processing actions emitted from the scene when events happen.
+Rather than using inheritance, which is a bad fit for Rust, every component / widget / control is an instance of the
+`View` struct. Views are referenced by their `name` property so the names should be unique throughout your application.
+All views several mandatory fields like name, visible, bounds, etc, as well as optional fields for state, input
+handlers, layout, and drawing.
 
-Instead of implementing a trait you create components by
-allocating a `View` is with optional fields for functions to handle
-input, state, layout, and drawing. This is the code that creates a button (as implemented in the
-library provided `make_button`):
+| Field   | Value                    | Description                                                                                       |
+|---------|--------------------------|---------------------------------------------------------------------------------------------------|
+| name    | string                   | should be unique throughout your application.                                                     | 
+| title   | string                   | Used by buttons as the display text                                                               |
+| bounds  | Bounds (position & size) | should only be modified inside of the layout function                                             |
+| v_flex  | grow, shrink or fixed    | indicates if the view wants itself grow, shrink, or have a fixed size in the vertical direction   |
+| h_flex  | grow, shrink or fixed    | indicates if the view wants itself grow, shrink, or have a fixed size in the horizontal direction |
+| v_align | start, center, or end    | indicates how the view wants to be aligned vertically                                             |
+| h_align | start, center, or end    | indicates how the view wants to be aligned horizontally                                           |
+| visible | bool                     |                                                                                                   |
+| state   | Option<Box<dyn Any>>     | optional object for the state of the view                                                         |
+| input   | Option<InputFn>          | optional input handler function                                                                   |
+| layout  | Option<LayoutFn>         | optional layout function                                                                          |
+| draw    | Option<DrawFn>           | optional drawing function                                                                         |
+
+`View`s are rendered using a `Theme` which can be customized for different colors and font sizes. Views carry their own
+internal state using an optional `state` struct. Application state should remain outside the scene/view structure and be
+handled by processing actions emitted from the scene when events happen.
+
+Instead of implementing a trait you create components by allocating a `View` is with optional fields for functions to
+handle input, state, layout, and drawing. This is the code that creates a button (as implemented in the library provided
+`make_button`):
 
 ```rust
 pub fn make_button(name: &ViewId, title: &str) -> View {
@@ -103,6 +116,34 @@ fn draw_button(e: &mut DrawEvent) {
     );
 }
 ```
+
+## Built In Views
+
+Iris has built in views for buttons, labels, text input, lists, and more. To use them call the `make_*` function from
+the list below, then customize it using `with_*` functions. ex: make a center aligned invisible button:
+```rust
+let button_id = ViewId::new("button1");
+let mut button = make_button( & button_id, "My cool button")
+    .with_h_align(Align::Center)
+    .with_visible(false);
+```
+
+| name           | function           | description                                 |
+|----------------|--------------------|---------------------------------------------|
+| button         | make_button        | standard button                             |
+| primary button | make_full_button   | with a command and primary color            |
+| toggle button  | make_toggle_button | button with a selected state                |
+| label          | make_label         | a plain label                               |
+| header label   | make_header_label  | a bold label in the accent color            |
+| scrolling list | make_list_view     | a scrolling list of items with one selected |
+| panel          | make_panel         | a standard panel                            |
+| tabbed panel   | make_tabbed_panel  | panel with several tabs                     |
+| text input     | make_text_input    | single line text input                      |
+| toggle group   | make_toggle_group  | group of exclusive toggle buttons           |
+
+
+
+
 
 ## Custom Views
 
@@ -189,8 +230,8 @@ See the full example code in [examples/custom_view.rs](examples/custom_view.rs).
 ## Themes
 
 `Theme` is a struct passed to every View's `draw` function. It stores the standard colors and fonts for drawing.
-However, these are just guidelines. A view can feel free to ignore them and draw whatever it wants.
-The theme fields should be used for:
+However, these are just guidelines. A view can feel free to ignore them and draw whatever it wants. The theme fields
+should be used for:
 
 * **standard**: fill and text colors for buttons, text inputs, and most interactive components.
 * **panel**: fill and text colors for panels and containers — may differ from `standard` depending on the theme.
@@ -213,9 +254,9 @@ use embedded_graphics::mono_font::ascii::{FONT_7X13, FONT_7X13_BOLD};
 use iris_ui::{FontKind, Theme, BW_THEME};
 
 let theme = Theme {
-    font:      FontKind::Bitmap(FONT_7X13),
-    bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
-    ..BW_THEME
+font:      FontKind::Bitmap(FONT_7X13),
+bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
+..BW_THEME
 };
 ```
 
@@ -226,8 +267,8 @@ optional `ttf` feature in your `Cargo.toml`:
 iris-ui = { ..., features = ["ttf"] }
 ```
 
-Then load a font from bytes and pass a reference to a `'static` slot (the example below uses `std`; see the
-no_std section for an alternative):
+Then load a font from bytes and pass a reference to a `'static` slot (the example below uses `std`; see the no_std
+section for an alternative):
 
 ```rust
 use std::sync::OnceLock;
@@ -235,17 +276,17 @@ use iris_ui::{FontKind, Theme, BW_THEME};
 
 static FONT: OnceLock<fontdue::Font> = OnceLock::new();
 
-let font: &'static fontdue::Font = FONT.get_or_init(|| {
-    fontdue::Font::from_bytes(
-        include_bytes!("my_font.ttf"),
-        fontdue::FontSettings::default(),
-    ).expect("failed to parse font")
+let font: & 'static fontdue::Font = FONT.get_or_init(| | {
+fontdue::Font::from_bytes(
+include_bytes ! ("my_font.ttf"),
+fontdue::FontSettings::default(),
+).expect("failed to parse font")
 });
 
 let theme = Theme {
-    font:      FontKind::TrueType { font, size: 13.0 },
-    bold_font: FontKind::TrueType { font, size: 14.0 },
-    ..BW_THEME
+font:      FontKind::TrueType { font, size: 13.0 },
+bold_font: FontKind::TrueType { font, size: 14.0 },
+..BW_THEME
 };
 ```
 
@@ -256,32 +297,32 @@ static mut FONT_STORAGE: core::mem::MaybeUninit<fontdue::Font> =
     core::mem::MaybeUninit::uninit();
 
 // called once during init:
-let font_ref: &'static fontdue::Font = unsafe {
-    FONT_STORAGE.write(
-        fontdue::Font::from_bytes(
-            include_bytes!("my_font.ttf"),
-            fontdue::FontSettings::default(),
-        ).expect("failed to parse font")
-    );
-    FONT_STORAGE.assume_init_ref()
+let font_ref: & 'static fontdue::Font = unsafe {
+FONT_STORAGE.write(
+fontdue::Font::from_bytes(
+include_bytes!("my_font.ttf"),
+fontdue::FontSettings::default (),
+).expect("failed to parse font")
+);
+FONT_STORAGE.assume_init_ref()
 };
 
 let theme = Theme {
-    font:      FontKind::TrueType { font: font_ref, size: 12.0 },
-    bold_font: FontKind::TrueType { font: font_ref, size: 12.0 },
-    ..BW_THEME
+font:      FontKind::TrueType { font: font_ref, size: 12.0 },
+bold_font: FontKind::TrueType { font: font_ref, size: 12.0 },
+..BW_THEME
 };
 ```
 
 The simulator example includes a **TTF** button in the font-size toolbar when built with
-`cargo run --example simulator --features std,ttf`. It loads a font from a known system path at runtime
-(Geneva on macOS, DejaVu Sans on Linux).
+`cargo run --example simulator --features std,ttf`. It loads a font from a known system path at runtime (Geneva on
+macOS, DejaVu Sans on Linux).
 
 ## Event Loop
 
-Iris does not provide its own event loop. Instead use whatever loop is provided by the environment you are using.
-You will need to receive native input events (taps, button clicks, keyboard presses, etc.) and convert them
-into Iris events. In a typical embedded environment it would look something like this:
+Iris does not provide its own event loop. Instead use whatever loop is provided by the environment you are using. You
+will need to receive native input events (taps, button clicks, keyboard presses, etc.) and convert them into Iris
+events. In a typical embedded environment it would look something like this:
 
 ```rust
 #[main]
