@@ -1,3 +1,12 @@
+## 2026-08-05 (5)
+
+Performance fixes from code review issues #17–#18:
+
+- **#17**: `Scene::get_children_ids` now returns `&[ViewId]` instead of `Vec<ViewId>`, eliminating the heap allocation and full clone on every call. All call sites that need to mutate the scene after iterating children (layouts, draw, tabbed_panel, grid) collect to an owned `Vec` with `.to_vec()` first; pure read-only callers (pick, dump, filtered getter) iterate the slice directly.
+- **#18**: `draw_view` now accepts an accumulated `offset: Point` and skips entire view subtrees whose global bounds do not intersect `scene.dirty_rect`. `Bounds::intersects` was added to `geom.rs` to support the check. When `dirty_rect.is_empty()` (full-redraw path), culling is disabled and all views are drawn. `draw_scene` passes `Point::zero()` as the initial offset.
+- Added `Bounds::intersects` unit test in `geom.rs`.
+- Added two unit tests in `scene.rs` (gated on `headless` feature): `test_dirty_rect_culls_non_overlapping_view` verifies that a view outside the dirty region is not drawn; `test_empty_dirty_rect_draws_all_views` verifies that an empty dirty_rect disables culling.
+
 ## 2026-08-05 (4)
 
 API design fixes from code review issues #14–#16:

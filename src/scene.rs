@@ -45,7 +45,7 @@ impl Scene {
         }
         let kids = self.get_children_ids(id);
         for kid in kids {
-            self.dump_view(&kid, &format!("{indent}    "));
+            self.dump_view(kid, &format!("{indent}    "));
         }
     }
 }
@@ -125,11 +125,11 @@ impl Scene {
     }
 
     /// Get the children of the view.
-    pub fn get_children_ids(&self, name: &ViewId) -> Vec<ViewId> {
+    pub fn get_children_ids(&self, name: &ViewId) -> &[ViewId] {
         if let Some(children) = self.children.get(name) {
-            children.clone()
+            children.as_slice()
         } else {
-            Vec::new()
+            &[]
         }
     }
 
@@ -295,7 +295,7 @@ impl Scene {
     }
     /// Remove a view and any children from the scene.
     pub fn remove_parent_and_children(&mut self, name: &ViewId) {
-        let kids = self.get_children_ids(name);
+        let kids = self.get_children_ids(name).to_vec();
         for kid in kids {
             self.remove_parent_and_children(&kid);
             self.remove_view_from_parent(name, &kid);
@@ -330,7 +330,8 @@ fn layout_root_panel(pass: &mut LayoutEvent) {
         view.bounds.size.w = pass.space.w;
         view.bounds.size.h = pass.space.h;
     }
-    for kid in &pass.scene.get_children_ids(&pass.target) {
+    let kids = pass.scene.get_children_ids(&pass.target).to_vec();
+    for kid in &kids {
         pass.layout_child(kid, pass.space);
     }
 }
@@ -401,7 +402,7 @@ fn pick_at_view(scene: &Scene, pt: &Point, name: &ViewId) -> Vec<Pick> {
             coll.push((view.name.clone(), pt.clone()));
             let pt2 = pt.subtract(&view.bounds.position);
             for kid in scene.get_children_ids(&view.name) {
-                let mut coll2 = pick_at_view(scene, &pt2, &kid);
+                let mut coll2 = pick_at_view(scene, &pt2, kid);
                 coll.append(&mut coll2);
             }
         }
@@ -414,40 +415,60 @@ pub fn draw_scene(scene: &mut Scene, ctx: &mut dyn DrawingContext, theme: &Theme
     if scene.dirty {
         ctx.fill_rect(&scene.bounds, &theme.standard.fill);
         let name = scene.root_id.clone();
-        draw_view(scene, ctx, theme, &name);
+        draw_view(scene, ctx, theme, &name, Point::zero());
         scene.dirty = false;
         scene.dirty_rect = Bounds::new_empty();
     }
 }
 
-fn draw_view(scene: &mut Scene, ctx: &mut dyn DrawingContext, theme: &Theme, name: &ViewId) {
-    let focused = &scene.focused.clone();
-    let bounds = &scene.bounds.clone();
-    if let Some(view) = scene.get_view_mut(name)
-        && view.visible
-    {
+fn draw_view(
+    scene: &mut Scene,
+    ctx: &mut dyn DrawingContext,
+    theme: &Theme,
+    name: &ViewId,
+    offset: Point,
+) {
+    let dirty_rect = scene.dirty_rect;
+
+    // Read visibility and local bounds before any mutable borrow.
+    let (visible, local_bounds) = match scene.get_view(name) {
+        Some(view) => (view.visible, view.bounds),
+        None => return,
+    };
+
+    if !visible {
+        return;
+    }
+
+    // Skip the entire subtree when it lies outside the dirty region.
+    if !dirty_rect.is_empty() && !(local_bounds + offset).intersects(&dirty_rect) {
+        return;
+    }
+
+    // Draw this view.
+    let focused = scene.focused.clone();
+    let scene_bounds = scene.bounds;
+    if let Some(view) = scene.get_view_mut(name) {
         if let Some(draw) = view.draw {
             let mut de: DrawEvent = DrawEvent {
                 theme,
                 view,
                 ctx,
-                focused,
-                bounds,
+                focused: &focused,
+                bounds: &scene_bounds,
             };
             draw(&mut de);
         }
     }
-    if let Some(view) = scene.get_view(name) {
-        // only draw children if visible
-        if view.visible {
-            let bounds = view.bounds;
-            ctx.translate(&bounds.position);
-            for kid in scene.get_children_ids(&view.name) {
-                draw_view(scene, ctx, theme, &kid);
-            }
-            ctx.translate(&bounds.position.negate());
-        }
+
+    // Draw children, accumulating the coordinate offset for dirty-rect checks.
+    let child_offset = offset + local_bounds.position;
+    ctx.translate(&local_bounds.position);
+    let kids: Vec<ViewId> = scene.get_children_ids(name).to_vec();
+    for kid in &kids {
+        draw_view(scene, ctx, theme, kid, child_offset);
     }
+    ctx.translate(&local_bounds.position.negate());
 }
 
 /// Layout the scene with the provided theme
@@ -543,5 +564,99 @@ mod tests {
         scene.remove_parent_and_children(&parent_id);
         assert_eq!(scene.get_children_ids(&parent_id).len(), 0);
         assert_eq!(scene.viewcount(), 1);
+    }
+}
+
+#[cfg(test)]
+#[cfg(any(feature = "std", feature = "headless"))]
+mod dirty_rect_tests {
+    use crate::geom::Bounds;
+    use crate::scene::{Scene, draw_scene};
+    use crate::test::MockDrawingContext;
+    use crate::view::{View, ViewId};
+    use crate::DrawEvent;
+    use alloc::boxed::Box;
+
+    struct DrawCounter {
+        count: i32,
+    }
+
+    fn counting_draw(e: &mut DrawEvent) {
+        if let Some(state) = e.view.get_state::<DrawCounter>() {
+            state.count += 1;
+        }
+    }
+
+    #[test]
+    fn test_dirty_rect_culls_non_overlapping_view() {
+        let theme = MockDrawingContext::make_mock_theme();
+        let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 200, 200));
+
+        let a_id = ViewId::new("a");
+        scene.add_view_to_root(View {
+            name: a_id.clone(),
+            bounds: Bounds::new(0, 0, 100, 200),
+            draw: Some(counting_draw),
+            state: Some(Box::new(DrawCounter { count: 0 })),
+            visible: true,
+            ..Default::default()
+        });
+
+        let b_id = ViewId::new("b");
+        scene.add_view_to_root(View {
+            name: b_id.clone(),
+            bounds: Bounds::new(100, 0, 100, 200),
+            draw: Some(counting_draw),
+            state: Some(Box::new(DrawCounter { count: 0 })),
+            visible: true,
+            ..Default::default()
+        });
+
+        // Mark only the left half as dirty — view B should be skipped.
+        scene.dirty_rect = Bounds::new(0, 0, 100, 200);
+        scene.dirty = true;
+
+        let mut ctx = MockDrawingContext::new(&scene);
+        draw_scene(&mut scene, &mut ctx, &theme);
+
+        assert_eq!(
+            scene.get_view_state::<DrawCounter>(&a_id).unwrap().count,
+            1,
+            "view A overlaps dirty_rect and must be drawn"
+        );
+        assert_eq!(
+            scene.get_view_state::<DrawCounter>(&b_id).unwrap().count,
+            0,
+            "view B is outside dirty_rect and must be skipped"
+        );
+    }
+
+    #[test]
+    fn test_empty_dirty_rect_draws_all_views() {
+        let theme = MockDrawingContext::make_mock_theme();
+        let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 200, 200));
+
+        let a_id = ViewId::new("a");
+        scene.add_view_to_root(View {
+            name: a_id.clone(),
+            bounds: Bounds::new(50, 50, 100, 100),
+            draw: Some(counting_draw),
+            state: Some(Box::new(DrawCounter { count: 0 })),
+            visible: true,
+            ..Default::default()
+        });
+
+        // Empty dirty_rect means "no partial-dirty region — redraw everything".
+        scene.dirty_rect = Bounds::new_empty();
+        scene.dirty = true;
+
+        let mut ctx = MockDrawingContext::new(&scene);
+        draw_scene(&mut scene, &mut ctx, &theme);
+
+        assert_eq!(
+            scene.get_view_state::<DrawCounter>(&a_id).unwrap().count,
+            1,
+            "with empty dirty_rect all views must be drawn"
+        );
     }
 }

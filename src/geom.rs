@@ -341,6 +341,14 @@ impl Bounds {
     pub fn is_empty(&self) -> bool {
         self.size.w < 1 || self.size.h < 1
     }
+    pub fn intersects(&self, other: &Bounds) -> bool {
+        !self.is_empty()
+            && !other.is_empty()
+            && self.x() < other.x2()
+            && other.x() < self.x2()
+            && self.y() < other.y2()
+            && other.y() < self.y2()
+    }
     pub fn contains(&self, pt: &Point) -> bool {
         if self.position.x <= pt.x && self.position.y <= pt.y {
             if self.position.x + self.size.w > pt.x && self.position.y + self.size.h > pt.y {
@@ -398,6 +406,21 @@ mod tests {
         // INFO - union Bounds { x: 140, y: 180, w: 80, h: 30 } Bounds { x: 140, y: 180, w: 80, h: 30 }
         assert_eq!(b2.union(b3), b2.clone());
     }
+    #[test]
+    fn test_intersects() {
+        let a = Bounds::new(0, 0, 100, 100);
+        let b = Bounds::new(100, 0, 100, 100); // adjacent — no overlap
+        assert!(!a.intersects(&b), "adjacent rects must not intersect");
+
+        let c = Bounds::new(50, 0, 100, 100); // overlaps a by 50px
+        assert!(a.intersects(&c), "overlapping rects must intersect");
+        assert!(c.intersects(&a), "intersects must be symmetric");
+
+        let empty = Bounds::new_empty();
+        assert!(!a.intersects(&empty), "nothing intersects an empty rect");
+        assert!(!empty.intersects(&a), "empty rect intersects nothing");
+    }
+
     #[test]
     fn test_point() {
         let pt1 = Point::new(8, 9);

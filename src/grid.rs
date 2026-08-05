@@ -156,7 +156,7 @@ fn layout_grid(pass: &mut LayoutEvent) {
     }
 
     let parent_bounds = view.bounds.clone();
-    let kids = pass.scene.get_children_ids(pass.target);
+    let kids = pass.scene.get_children_ids(pass.target).to_vec();
     let space = parent_bounds.size.clone() - padding;
     for kid in kids {
         pass.layout_child(&kid, space);

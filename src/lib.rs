@@ -83,7 +83,7 @@ pub struct LayoutEvent<'a> {
 
 impl<'a> LayoutEvent<'a> {
     pub(crate) fn layout_all_children(&mut self, name: &ViewId, space: Size) {
-        let fixed_kids = self.scene.get_children_ids(name);
+        let fixed_kids = self.scene.get_children_ids(name).to_vec();
         for kid in &fixed_kids {
             self.layout_child(kid, space);
         }
@@ -164,7 +164,7 @@ mod tests {
         if let Some(parent) = evt.scene.get_view_mut(evt.target) {
             let mut y = 0;
             let bounds = parent.bounds;
-            let kids = evt.scene.get_children_ids(evt.target);
+            let kids = evt.scene.get_children_ids(evt.target).to_vec();
             for kid in kids {
                 if let Some(ch) = evt.scene.get_view_mut(&kid) {
                     ch.bounds.position.x = 0;

@@ -49,9 +49,10 @@ pub fn make_tabbed_panel(
             let container = container.clone();
 
             // hide all the children
-            for kid in e.scene.get_children_ids(&container) {
+            let kids = e.scene.get_children_ids(&container).to_vec();
+            for kid in &kids {
                 if kid.to_string() != "tabs" {
-                    e.scene.hide_view(&kid);
+                    e.scene.hide_view(kid);
                 }
             }
 
@@ -115,7 +116,8 @@ pub fn layout_tabbed_panel(pass: &mut LayoutEvent) {
         // layout content panels
         if let Some(view) = pass.scene.get_view(&tabs_id) {
             let insets = Insets::new(view.bounds.size.h, 1, 1, 1);
-            for kid in &pass.scene.get_children_ids(&pass.target) {
+            let kids = pass.scene.get_children_ids(&pass.target).to_vec();
+            for kid in &kids {
                 if kid == &tabs_id {
                     continue;
                 }

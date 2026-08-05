@@ -63,8 +63,9 @@ pub fn layout_vbox(pass: &mut LayoutEvent) {
 
     // calculate the max width of any child
     let mut max_width = 0;
-    for kid in pass.scene.get_children_ids(&pass.target) {
-        if let Some(kid) = pass.scene.get_view_mut(&kid) {
+    let all_kids = pass.scene.get_children_ids(&pass.target).to_vec();
+    for kid in &all_kids {
+        if let Some(kid) = pass.scene.get_view_mut(kid) {
             max_width = max_width.max(kid.bounds.size.w);
         }
     }
@@ -74,10 +75,9 @@ pub fn layout_vbox(pass: &mut LayoutEvent) {
 
     // position all the children
     let mut y = padding.top;
-    let all_kids = pass.scene.get_children_ids(&pass.target);
     let avail_w = available_space.w;
-    for kid in all_kids {
-        if let Some(kid) = pass.scene.get_view_mut(&kid) {
+    for kid in &all_kids {
+        if let Some(kid) = pass.scene.get_view_mut(kid) {
             kid.bounds.position.x = match &kid.h_align {
                 Start => 0,
                 Center => (avail_w - kid.bounds.size.w) / 2,
@@ -162,8 +162,9 @@ pub fn layout_hbox(pass: &mut LayoutEvent) {
 
     // calculate the max height of any child
     let mut max_height = 0;
-    for kid in pass.scene.get_children_ids(&pass.target) {
-        if let Some(kid) = pass.scene.get_view_mut(&kid) {
+    let all_kids = pass.scene.get_children_ids(&pass.target).to_vec();
+    for kid in &all_kids {
+        if let Some(kid) = pass.scene.get_view_mut(kid) {
             max_height = max_height.max(kid.bounds.size.h);
         }
     }
@@ -174,8 +175,8 @@ pub fn layout_hbox(pass: &mut LayoutEvent) {
     }
     let avail_h = available_space.h;
     let mut x = padding.left;
-    for kid in pass.scene.get_children_ids(&pass.target) {
-        if let Some(kid) = pass.scene.get_view_mut(&kid) {
+    for kid in &all_kids {
+        if let Some(kid) = pass.scene.get_view_mut(kid) {
             kid.bounds.position.x = x;
             x += kid.bounds.size.w;
             x += gap;

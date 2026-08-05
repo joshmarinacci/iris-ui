@@ -117,12 +117,12 @@ Issues ranked by severity. Check the box when implemented.
 
 ## Performance
 
-- [ ] **17. `scene.rs` lines 129–135 — `get_children_ids` clones the full `Vec` on every call**
+- [x] **17. `scene.rs` lines 129–135 — `get_children_ids` clones the full `Vec` on every call**
   Called repeatedly per frame in layout, draw, and pick paths. Each clone heap-allocates
   all `ViewId` strings. Fix: return `&[ViewId]` (requires lifetime annotation) or at minimum
   use a `Cow`.
 
-- [ ] **18. `scene.rs` lines 416–424 — `draw_scene` ignores `dirty_rect` for culling**
+- [x] **18. `scene.rs` lines 416–424 — `draw_scene` ignores `dirty_rect` for culling**
   `dirty_rect` is carefully maintained but `draw_scene` always clears and redraws the entire
   view tree on every dirty frame. For embedded displays where partial redraws matter,
   `draw_view` should skip subtrees whose global bounds don't intersect `dirty_rect`.
@@ -135,7 +135,7 @@ Issues ranked by severity. Check the box when implemented.
   `Size { w: -99, h: -99 }` is indistinguishable from an arithmetic underflow bug.
   `is_empty()` treats any `w < 1 || h < 1` as empty, so `Size { w: 0, h: 0 }` works
   and is less surprising.
-
+  
 - [ ] **20. `text_input.rs` — byte cursor assumes ASCII, no enforcement**
   `cursor_forward`/`cursor_back` move by 1 byte. `String::insert`/`remove` panic on
   multi-byte character boundaries. `TypedAscii(u8)` keeps this safe today, but there is no
