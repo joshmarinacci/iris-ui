@@ -473,6 +473,253 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn test_vbox_gap() {
+        // gap > 0 pushes each child down by (previous_child_height + gap).
+        let mut scene = Scene::new();
+        let parent_id: ViewId = "parent".into();
+        let parent_view = View {
+            name: parent_id.clone(),
+            state: Some(Box::new(PanelState {
+                border_visible: false,
+                padding: Insets::new_same(10),
+                gap: 5,
+            })),
+            h_flex: Flex::Grow,
+            v_flex: Flex::Grow,
+            layout: Some(layout_vbox),
+            ..Default::default()
+        };
+        let child1_id: ViewId = "child1".into();
+        scene.add_view_to_parent(
+            View {
+                name: child1_id.clone(),
+                title: "a".into(), // 10px wide, 10px tall
+                h_align: Align::Start,
+                layout: Some(layout_button),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+        let child2_id: ViewId = "child2".into();
+        scene.add_view_to_parent(
+            View {
+                name: child2_id.clone(),
+                title: "a".into(),
+                h_align: Align::Start,
+                layout: Some(layout_button),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+        scene.add_view_to_parent(parent_view, &scene.root_id());
+
+        let theme = MockDrawingContext::make_mock_theme();
+        layout_scene(&mut scene, &theme);
+
+        // child1 is placed at top-left padding corner
+        assert_eq!(
+            view_bounds(&scene, &child1_id).position,
+            Point::new(10, 10),
+            "child1 must be at (padding.left, padding.top)"
+        );
+        // child2 is offset by child1.height + gap below child1
+        assert_eq!(
+            view_bounds(&scene, &child2_id).position,
+            Point::new(10, 25), // 10 + 10 + 5
+            "child2 must be at (padding.left, padding.top + child1.h + gap)"
+        );
+    }
+
+    #[test]
+    fn test_hbox_gap() {
+        // gap > 0 pushes each child right by (previous_child_width + gap).
+        let mut scene = Scene::new();
+        let parent_id: ViewId = "parent".into();
+        let parent_view = View {
+            name: parent_id.clone(),
+            state: Some(Box::new(PanelState {
+                border_visible: false,
+                padding: Insets::new_same(8),
+                gap: 6,
+            })),
+            h_flex: Flex::Grow,
+            v_flex: Flex::Grow,
+            layout: Some(layout_hbox),
+            ..Default::default()
+        };
+        let child1_id: ViewId = "child1".into();
+        scene.add_view_to_parent(
+            View {
+                name: child1_id.clone(),
+                title: "a".into(), // 10px wide, 10px tall
+                v_align: Align::Start,
+                layout: Some(layout_button),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+        let child2_id: ViewId = "child2".into();
+        scene.add_view_to_parent(
+            View {
+                name: child2_id.clone(),
+                title: "a".into(),
+                v_align: Align::Start,
+                layout: Some(layout_button),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+        scene.add_view_to_parent(parent_view, &scene.root_id());
+
+        let theme = MockDrawingContext::make_mock_theme();
+        layout_scene(&mut scene, &theme);
+
+        // child1 is placed at the left/top padding corner
+        assert_eq!(
+            view_bounds(&scene, &child1_id).position,
+            Point::new(8, 8),
+            "child1 must be at (padding.left, padding.top)"
+        );
+        // child2 is offset right by child1.width + gap
+        assert_eq!(
+            view_bounds(&scene, &child2_id).position,
+            Point::new(24, 8), // 8 + 10 + 6
+            "child2 must be at (padding.left + child1.w + gap, padding.top)"
+        );
+    }
+
+    #[test]
+    fn test_vbox_shrinks_width_to_widest_child() {
+        // h_flex=Shrink: parent width collapses to max_child_width + 2*padding.
+        let mut scene = Scene::new();
+        let parent_id: ViewId = "parent".into();
+        let parent_view = View {
+            name: parent_id.clone(),
+            state: Some(Box::new(PanelState {
+                border_visible: false,
+                padding: Insets::new_same(5),
+                gap: 0,
+            })),
+            h_flex: Flex::Shrink,
+            v_flex: Flex::Grow,
+            layout: Some(layout_vbox),
+            ..Default::default()
+        };
+        // wide child: "abc" = 30px
+        let wide_id: ViewId = "wide".into();
+        scene.add_view_to_parent(
+            View {
+                name: wide_id.clone(),
+                title: "abc".into(),
+                h_align: Align::Start,
+                layout: Some(layout_button),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+        // narrow child: "a" = 10px
+        let narrow_id: ViewId = "narrow".into();
+        scene.add_view_to_parent(
+            View {
+                name: narrow_id.clone(),
+                title: "a".into(),
+                h_align: Align::Start,
+                layout: Some(layout_button),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+        scene.add_view_to_parent(parent_view, &scene.root_id());
+
+        let theme = MockDrawingContext::make_mock_theme();
+        layout_scene(&mut scene, &theme);
+
+        // Parent width = max(30, 10) + 2*5 = 40
+        assert_eq!(
+            view_bounds(&scene, &parent_id).size.w,
+            40,
+            "parent width must shrink to widest child + 2*padding"
+        );
+        assert_eq!(
+            view_bounds(&scene, &wide_id).position,
+            Point::new(5, 5),
+            "wide child must be at (padding.left, padding.top)"
+        );
+        assert_eq!(
+            view_bounds(&scene, &narrow_id).position,
+            Point::new(5, 15), // 5 + 10 + 0
+            "narrow child must be at (padding.left, padding.top + wide.h)"
+        );
+    }
+
+    #[test]
+    fn test_hbox_shrinks_height_to_tallest_child() {
+        // v_flex=Shrink: parent height collapses to max_child_height + 2*padding.
+        let mut scene = Scene::new();
+        let parent_id: ViewId = "parent".into();
+        let parent_view = View {
+            name: parent_id.clone(),
+            state: Some(Box::new(PanelState {
+                border_visible: false,
+                padding: Insets::new_same(6),
+                gap: 0,
+            })),
+            h_flex: Flex::Grow,
+            v_flex: Flex::Shrink,
+            layout: Some(layout_hbox),
+            ..Default::default()
+        };
+        let child1_id: ViewId = "child1".into();
+        scene.add_view_to_parent(
+            View {
+                name: child1_id.clone(),
+                title: "a".into(), // 10px wide, 10px tall
+                v_align: Align::Start,
+                layout: Some(layout_button),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+        let child2_id: ViewId = "child2".into();
+        scene.add_view_to_parent(
+            View {
+                name: child2_id.clone(),
+                title: "a".into(),
+                v_align: Align::Start,
+                layout: Some(layout_button),
+                ..Default::default()
+            },
+            &parent_id,
+        );
+        scene.add_view_to_parent(parent_view, &scene.root_id());
+
+        let theme = MockDrawingContext::make_mock_theme();
+        layout_scene(&mut scene, &theme);
+
+        // Parent height = max(10, 10) + 2*6 = 22
+        assert_eq!(
+            view_bounds(&scene, &parent_id).size.h,
+            22,
+            "parent height must shrink to tallest child + 2*padding"
+        );
+        assert_eq!(
+            view_bounds(&scene, &parent_id).size.w,
+            200,
+            "parent width must grow to fill scene"
+        );
+        assert_eq!(
+            view_bounds(&scene, &child1_id).position,
+            Point::new(6, 6),
+            "child1 must be at (padding.left, padding.top)"
+        );
+        assert_eq!(
+            view_bounds(&scene, &child2_id).position,
+            Point::new(16, 6), // 6 + 10
+            "child2 must be at (padding.left + child1.w, padding.top)"
+        );
+    }
+
+    #[test]
     fn test_vbox_fixed_height() {
         let mut scene = Scene::new();
         let parent_id: ViewId = "parent".into();
