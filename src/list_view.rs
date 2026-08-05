@@ -151,6 +151,9 @@ fn layout_list(e: &mut LayoutEvent) {
         let height = state.items.len() as i32 * ch * 2;
         if let Some(view) = e.scene.get_view_mut(e.target) {
             view.bounds.size.h = height;
+            if view.h_flex == crate::view::Flex::Grow {
+                view.bounds.size.w = e.space.w;
+            }
         }
     }
 }
@@ -158,10 +161,13 @@ fn layout_list(e: &mut LayoutEvent) {
 #[cfg(test)]
 mod tests {
     use crate::geom::{Bounds, Point};
+    use crate::layouts::layout_vbox;
     use crate::list_view::{ListState, make_list_view};
+    use crate::panel::PanelState;
     use crate::scene::{Scene, click_at, draw_scene, layout_scene};
     use crate::test::MockDrawingContext;
-    use crate::view::ViewId;
+    use crate::view::{Flex, View, ViewId};
+    use alloc::boxed::Box;
     use alloc::vec;
 
     #[test]
@@ -218,5 +224,33 @@ mod tests {
         assert_eq!(scene.dirty, true);
         draw_scene(&mut scene, &mut ctx, &theme);
         assert_eq!(scene.dirty, false);
+    }
+
+    #[test]
+    fn test_list_view_grows_to_fill_parent_width() {
+        let theme = MockDrawingContext::make_mock_theme();
+        // 320×240 scene; parent vbox fills it entirely
+        let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
+
+        let parent_id: ViewId = "parent".into();
+        let parent = View {
+            name: parent_id.clone(),
+            h_flex: Flex::Grow,
+            v_flex: Flex::Grow,
+            layout: Some(layout_vbox),
+            state: Some(Box::new(PanelState::default())),
+            ..Default::default()
+        };
+        scene.add_view_to_parent(parent, &scene.root_id());
+
+        let list_id: ViewId = "list".into();
+        let mut list = make_list_view(&list_id, vec!["A", "B", "C"], 0);
+        list.h_flex = Flex::Grow;
+        scene.add_view_to_parent(list, &parent_id);
+
+        layout_scene(&mut scene, &theme);
+
+        let list_w = scene.get_view(&list_id).unwrap().bounds.size.w;
+        assert_eq!(list_w, 320, "list width should fill the 320px parent width");
     }
 }

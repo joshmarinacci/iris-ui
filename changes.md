@@ -1,3 +1,11 @@
+## 2026-08-05 (8)
+
+Fixed `layout_list` in `list_view.rs` ignoring `h_flex = Grow`:
+
+`layout_list` set the view height based on item count but never touched the width, leaving it at the default 100px regardless of the flex setting. Added a check: when `h_flex == Grow`, width is set to `e.space.w` (the space offered by the parent), matching the pattern used by all other layout functions.
+
+Added regression test `test_list_view_grows_to_fill_parent_width` which places a `Grow` list view inside a 320px-wide `layout_vbox` parent and asserts the list width equals 320px. The test failed before the fix and passes after.
+
 ## 2026-08-05 (7)
 
 Fixed gap accounting bug in `layout_hbox` and `layout_vbox`:
