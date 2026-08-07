@@ -1,3 +1,7 @@
+## 2026-08-07
+
+Added `set_focus_enabled(bool)` / `is_focus_enabled()` to `Scene` in `src/scene.rs`. When focus is disabled, `set_focused` is a no-op: `focused` stays `None`, no dirty rects are produced for focus transitions, no focus rings are drawn, and `event_at_focused` dispatches to nothing. Useful on e-paper touch screens where minimizing dirty rects is critical. Three new tests in `focus_disabled_tests` verify the flag prevents dirty rect expansion, that the default (enabled) behaviour is unchanged, and that the flag can be toggled at runtime.
+
 ## 2026-08-05 (8)
 
 Fixed `layout_list` in `list_view.rs` ignoring `h_flex = Grow`:

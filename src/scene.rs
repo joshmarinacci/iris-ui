@@ -21,6 +21,7 @@ pub struct Scene {
     pub dirty_rect: Bounds,
     root_id: ViewId,
     pub(crate) focused: Option<ViewId>,
+    focus_enabled: bool,
     layout_dirty: bool,
     scale: u32,
 }
@@ -30,8 +31,8 @@ impl Scene {
     pub fn dump(&self) {
         info!("scene");
         info!(
-            " dirty {} {}, focused {:?}",
-            self.dirty, self.dirty_rect, self.focused
+            " dirty {} {}, focused {:?}, focus_enabled {}",
+            self.dirty, self.dirty_rect, self.focused, self.focus_enabled
         );
         self.dump_view(&self.root_id.clone(), "");
     }
@@ -59,8 +60,11 @@ impl Scene {
         self.count += 1;
         ViewId::make(format!("view_{}", self.count))
     }
-    /// Set the focused view.
+    /// Set the focused view. No-op when focus management is disabled.
     pub fn set_focused(&mut self, name: &ViewId) {
+        if !self.focus_enabled {
+            return;
+        }
         if let Some(fo) = self.focused.clone() {
             self.mark_dirty_view(&fo);
         }
@@ -76,6 +80,20 @@ impl Scene {
     /// Returns if the view is focused or not.
     pub fn is_focused(&self, name: &ViewId) -> bool {
         self.focused.as_ref().is_some_and(|focused| focused == name)
+    }
+
+    /// Enable or disable focus tracking. Defaults to `true`.
+    ///
+    /// When `false`, `set_focused` is a no-op: `focused` stays `None`,
+    /// no dirty rects are produced for focus transitions, no focus rings
+    /// are drawn, and `event_at_focused` dispatches to nothing.
+    pub fn set_focus_enabled(&mut self, enabled: bool) {
+        self.focus_enabled = enabled;
+    }
+
+    /// Returns whether focus tracking is currently enabled.
+    pub fn is_focus_enabled(&self) -> bool {
+        self.focus_enabled
     }
 
     /// Returns if the view is visible or not.
@@ -234,6 +252,7 @@ impl Scene {
             layout_dirty: true,
             root_id,
             focused: None,
+            focus_enabled: true,
             dirty_rect: bounds,
             children: HashMap::new(),
             parents: HashMap::new(),
@@ -658,5 +677,77 @@ mod dirty_rect_tests {
             1,
             "with empty dirty_rect all views must be drawn"
         );
+    }
+}
+
+#[cfg(test)]
+#[cfg(any(feature = "std", feature = "headless"))]
+mod focus_disabled_tests {
+    use crate::geom::Bounds;
+    use crate::scene::{Scene, click_at, draw_scene};
+    use crate::test::MockDrawingContext;
+    use crate::view::{View, ViewId};
+
+    fn make_button_scene() -> (Scene, ViewId) {
+        let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 200, 200));
+        let btn_id = ViewId::new("btn");
+        scene.add_view_to_root(View {
+            name: btn_id.clone(),
+            bounds: Bounds::new(10, 10, 100, 40),
+            visible: true,
+            input: Some(|e| {
+                e.scene.set_focused(e.target);
+                None
+            }),
+            ..Default::default()
+        });
+        // Clear initial dirty state.
+        let theme = MockDrawingContext::make_mock_theme();
+        let mut ctx = MockDrawingContext::new(&scene);
+        draw_scene(&mut scene, &mut ctx, &theme);
+        (scene, btn_id)
+    }
+
+    #[test]
+    fn focus_disabled_prevents_dirty_and_focused() {
+        let (mut scene, _btn_id) = make_button_scene();
+        scene.set_focus_enabled(false);
+
+        click_at(&mut scene, &[], crate::geom::Point { x: 50, y: 30 });
+
+        assert!(scene.focused.is_none(), "focused must stay None when disabled");
+        assert!(!scene.dirty, "no dirty flag when focus is disabled");
+        assert!(scene.dirty_rect.is_empty(), "dirty_rect must stay empty");
+    }
+
+    #[test]
+    fn focus_enabled_by_default_unchanged() {
+        let (mut scene, _btn_id) = make_button_scene();
+        // Default: focus_enabled = true — no call to set_focus_enabled.
+
+        click_at(&mut scene, &[], crate::geom::Point { x: 50, y: 30 });
+
+        assert!(scene.focused.is_some(), "focused must be set when enabled");
+        assert!(scene.dirty, "dirty flag must be set on focus change");
+    }
+
+    #[test]
+    fn focus_can_be_reenabled() {
+        let (mut scene, _btn_id) = make_button_scene();
+
+        // Disable: tap should not set focus.
+        scene.set_focus_enabled(false);
+        click_at(&mut scene, &[], crate::geom::Point { x: 50, y: 30 });
+        assert!(scene.focused.is_none());
+        assert!(!scene.is_focus_enabled());
+
+        // Re-enable: tap should set focus.
+        let theme = MockDrawingContext::make_mock_theme();
+        let mut ctx = MockDrawingContext::new(&scene);
+        draw_scene(&mut scene, &mut ctx, &theme);
+        scene.set_focus_enabled(true);
+        click_at(&mut scene, &[], crate::geom::Point { x: 50, y: 30 });
+        assert!(scene.focused.is_some());
+        assert!(scene.is_focus_enabled());
     }
 }
