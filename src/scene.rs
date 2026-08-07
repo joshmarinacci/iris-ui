@@ -142,6 +142,12 @@ impl Scene {
         self.mark_dirty_all();
     }
 
+    /// Marks the layout as dirty and marks only the given view (not the whole screen) as dirty.
+    pub fn mark_layout_dirty_view(&mut self, name: &ViewId) {
+        self.layout_dirty = true;
+        self.mark_dirty_view(name);
+    }
+
     /// Get the children of the view.
     pub fn get_children_ids(&self, name: &ViewId) -> &[ViewId] {
         if let Some(children) = self.children.get(name) {

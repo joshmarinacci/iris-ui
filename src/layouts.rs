@@ -22,7 +22,7 @@ pub fn layout_vbox(pass: &mut LayoutEvent) {
     let parent_h = parent.bounds.size.h;
     let mut available_space: Size = pass.space - padding;
     if h_flex == Fixed {
-        available_space.w = parent_w;
+        available_space.w = parent_w - padding.left - padding.right;
     }
     if v_flex == Fixed {
         available_space.h = parent_h - padding.top - padding.bottom;
@@ -55,7 +55,7 @@ pub fn layout_vbox(pass: &mut LayoutEvent) {
         .get_children_ids_filtered(&pass.target, |v| v.v_flex == Flex::Grow);
     if flex_kids.len() > 0 {
         let flex_space = Size {
-            w: pass.space.w - padding.left - padding.right,
+            w: available_space.w,
             h: vert_leftover / (flex_kids.len() as i32),
         };
         for kid in flex_kids {
@@ -89,6 +89,8 @@ pub fn layout_vbox(pass: &mut LayoutEvent) {
             y += kid.bounds.size.h + gap;
         }
     }
+    // content_h: sum of all children heights + gaps between them (strip trailing gap)
+    let content_h = if all_kids.is_empty() { 0 } else { y - gap };
     // layout self
     if let Some(view) = pass.scene.get_view_mut(&pass.target) {
         view.bounds.size.w = match &view.h_flex {
@@ -98,9 +100,21 @@ pub fn layout_vbox(pass: &mut LayoutEvent) {
         };
         view.bounds.size.h = match &view.v_flex {
             Fixed => view.bounds.size.h,
-            Shrink => view.bounds.size.h,
+            Shrink => content_h + padding.bottom,
             Grow => pass.space.h,
         };
+    }
+}
+
+pub fn layout_centered_dialog(pass: &mut LayoutEvent) {
+    let target_id = pass.target.clone();
+    let available = pass.space;
+    layout_vbox(pass);
+    if let Some(view) = pass.scene.get_view_mut(&target_id) {
+        let dialog_w = view.bounds.size.w;
+        let dialog_h = view.bounds.size.h;
+        view.bounds.position.x = ((available.w - dialog_w) / 2).max(0);
+        view.bounds.position.y = ((available.h - dialog_h) / 2).max(0);
     }
 }
 
