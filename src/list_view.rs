@@ -148,9 +148,13 @@ fn draw_list(e: &mut DrawEvent) {
 fn layout_list(e: &mut LayoutEvent) {
     if let Some(state) = e.scene.get_view_state::<ListState>(e.target) {
         let ch = e.theme.font.char_height();
-        let height = state.items.len() as i32 * ch * 2;
+        let content_height = state.items.len() as i32 * ch * 2;
         if let Some(view) = e.scene.get_view_mut(e.target) {
-            view.bounds.size.h = height;
+            view.bounds.size.h = if view.v_flex == crate::view::Flex::Grow {
+                e.space.h
+            } else {
+                content_height
+            };
             if view.h_flex == crate::view::Flex::Grow {
                 view.bounds.size.w = e.space.w;
             }
