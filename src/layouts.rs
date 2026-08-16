@@ -5,9 +5,10 @@ use crate::view::Align::{Center, End, Start};
 use crate::view::Flex;
 use crate::view::Flex::Grow;
 use Flex::{Fixed, Shrink};
+use embedded_graphics::pixelcolor::PixelColor;
 use log::info;
 
-pub fn layout_vbox(pass: &mut LayoutEvent) {
+pub fn layout_vbox<C: PixelColor>(pass: &mut LayoutEvent<C>) {
     let Some(parent) = pass.scene.get_view_mut(&pass.target) else {
         return;
     };
@@ -106,7 +107,7 @@ pub fn layout_vbox(pass: &mut LayoutEvent) {
     }
 }
 
-pub fn layout_centered_dialog(pass: &mut LayoutEvent) {
+pub fn layout_centered_dialog<C: PixelColor>(pass: &mut LayoutEvent<C>) {
     let target_id = pass.target.clone();
     let available = pass.space;
     layout_vbox(pass);
@@ -118,7 +119,7 @@ pub fn layout_centered_dialog(pass: &mut LayoutEvent) {
     }
 }
 
-pub fn layout_hbox(pass: &mut LayoutEvent) {
+pub fn layout_hbox<C: PixelColor>(pass: &mut LayoutEvent<C>) {
     let Some(parent) = pass.scene.get_view_mut(&pass.target) else {
         return;
     };
@@ -215,7 +216,7 @@ pub fn layout_hbox(pass: &mut LayoutEvent) {
     }
 }
 
-pub fn layout_std_panel(pass: &mut LayoutEvent) {
+pub fn layout_std_panel<C: PixelColor>(pass: &mut LayoutEvent<C>) {
     let Some(view) = pass.scene.get_view_mut(&pass.target) else {
         info!("view not found!");
         return;
@@ -247,9 +248,10 @@ pub(crate) mod tests {
     use crate::view::Align::Start;
     use crate::view::{Align, Flex, View, ViewId};
     use alloc::boxed::Box;
+    use embedded_graphics::pixelcolor::Rgb565;
     use test_log::test;
 
-    pub(crate) fn layout_button(layout: &mut LayoutEvent) {
+    pub(crate) fn layout_button(layout: &mut LayoutEvent<Rgb565>) {
         if let Some(view) = layout.scene.get_view_mut(&layout.target) {
             view.bounds.size = Size::new((view.title.len() * 10) as i32, 10);
         }
@@ -275,7 +277,7 @@ pub(crate) mod tests {
         );
     }
 
-    fn view_bounds(scene: &Scene, name: &ViewId) -> Bounds {
+    fn view_bounds(scene: &Scene<Rgb565>, name: &ViewId) -> Bounds {
         if let Some(view) = scene.get_view(name) {
             view.bounds
         } else {
@@ -391,14 +393,14 @@ pub(crate) mod tests {
         }
     }
 
-    pub fn make_standard_view(name: &ViewId) -> View {
+    pub fn make_standard_view(name: &ViewId) -> View<Rgb565> {
         View {
             name: name.clone(),
             ..Default::default()
         }
     }
 
-    pub(crate) fn layout_fill(layout: &mut LayoutEvent) {
+    pub(crate) fn layout_fill(layout: &mut LayoutEvent<Rgb565>) {
         if let Some(view) = layout.scene.get_view_mut(&layout.target) {
             if view.h_flex == Flex::Grow {
                 view.bounds.size.w = layout.space.w;

@@ -5,6 +5,7 @@ use crate::view::Flex::Shrink;
 use crate::view::{View, ViewId};
 use alloc::boxed::Box;
 use alloc::string::{String, ToString};
+use embedded_graphics::pixelcolor::PixelColor;
 
 pub struct ButtonState {
     command: String,
@@ -12,10 +13,15 @@ pub struct ButtonState {
     pressed: bool,
 }
 
-pub fn make_button(name: &ViewId, title: &str) -> View {
+pub fn make_button<C: PixelColor>(name: &ViewId, title: &str) -> View<C> {
     make_full_button(name, title, title.into(), false)
 }
-pub fn make_full_button(name: &ViewId, title: &str, command: &str, primary: bool) -> View {
+pub fn make_full_button<C: PixelColor>(
+    name: &ViewId,
+    title: &str,
+    command: &str,
+    primary: bool,
+) -> View<C> {
     View {
         name: name.clone(),
         title: title.to_string(),
@@ -100,15 +106,16 @@ mod tests {
     use crate::scene::{Scene, click_at, draw_scene, pointer_down_at, pointer_up_at};
     use crate::test::MockDrawingContext;
     use alloc::vec;
+    use embedded_graphics::pixelcolor::Rgb565;
 
-    fn repaint(scene: &mut Scene) {
+    fn repaint(scene: &mut Scene<Rgb565>) {
         let theme = MockDrawingContext::make_mock_theme();
         let mut ctx = MockDrawingContext::new(scene);
         draw_scene(scene, &mut ctx, &theme);
         scene.dirty_rect = Bounds::new_empty();
     }
 
-    fn make_test_scene() -> Scene {
+    fn make_test_scene() -> Scene<Rgb565> {
         let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 200, 200));
         let button = make_button(&"button".into(), "Button").position_at(20, 20);
         scene.add_view_to_root(button);

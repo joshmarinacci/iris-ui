@@ -25,7 +25,7 @@ use embedded_graphics_simulator::{
     Window,
 };
 use env_logger::Target;
-use iris_ui::device::{EmbeddedDrawingContext, FromRgb565};
+use iris_ui::device::{EmbeddedDrawingContext, FromColor};
 use iris_ui::grid::{GridLayoutState, LayoutConstraint, make_grid_panel};
 use iris_ui::input::{InputEvent, InputResult, OutputAction, TextAction};
 use iris_ui::label::{make_header_label, make_label};
@@ -70,12 +70,12 @@ fn get_ttf_font() -> Option<&'static fontdue::Font> {
 }
 
 const POPUP_MENU: &'static ViewId = &ViewId::new("popup-menu");
-fn make_scene(scale: u32) -> Scene {
+fn make_scene(scale: u32) -> Scene<Rgb565> {
     let mut scene = Scene::new_with_scale(Bounds::new(0, 0, 320, 240), scale);
     const TABBED_PANEL: &'static ViewId = &ViewId::new("tabbed-panel");
 
     let tab_names = vec!["buttons", "layouts", "lists", "inputs", "themes"];
-    let mut tabbed_panel: View = make_tabbed_panel(&TABBED_PANEL, tab_names, 0, &mut scene);
+    let mut tabbed_panel: View<Rgb565> = make_tabbed_panel(&TABBED_PANEL, tab_names, 0, &mut scene);
     const BUTTONS_PANEL: &'static ViewId = &ViewId::new("buttons");
     const LAYOUT_PANEL: &'static ViewId = &ViewId::new("layout-panel");
     const LISTS_PANEL: &'static ViewId = &ViewId::new("lists-panel");
@@ -253,7 +253,7 @@ fn make_scene(scale: u32) -> Scene {
 
     scene
 }
-fn make_column(name: &'static str) -> View {
+fn make_column(name: &'static str) -> View<Rgb565> {
     make_panel(&ViewId::new(name))
         .with_state(Some(Box::new(PanelState::new())))
         .with_layout(Some(layout_vbox))
@@ -262,10 +262,10 @@ fn make_column(name: &'static str) -> View {
 fn run_loop<C>(
     mut display: SimulatorDisplay<C>,
     output_settings: &OutputSettings,
-    mut scene: Scene,
-    mut theme: Theme,
+    mut scene: Scene<Rgb565>,
+    mut theme: Theme<Rgb565>,
 ) where
-    C: PixelColor + FromRgb565 + Into<Rgb888> + From<Rgb888>,
+    C: PixelColor + FromColor<Rgb565> + Into<Rgb888> + From<Rgb888>,
 {
     let scale = scene.scale();
     let mut window = Window::new("Simulator Test", output_settings);
@@ -391,7 +391,7 @@ fn keydown_to_char(keycode: Keycode, keymod: Mod) -> TextAction {
     }
 }
 
-fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme) {
+fn handle_events(result: InputResult, scene: &mut Scene<Rgb565>, theme: &mut Theme<Rgb565>) {
     println!("result of event {:?} from {}", result.input, result.source);
     match &result.action {
         Some(OutputAction::Command(cmd)) => {
@@ -453,7 +453,7 @@ fn handle_events(result: InputResult, scene: &mut Scene, theme: &mut Theme) {
     }
 }
 
-const LIGHT_THEME: Theme = Theme {
+const LIGHT_THEME: Theme<Rgb565> = Theme {
     font: FontKind::Bitmap(FONT_7X13),
     bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
     standard: ViewStyle {
@@ -473,7 +473,7 @@ const LIGHT_THEME: Theme = Theme {
         text: Rgb565::WHITE,
     },
 };
-const DARK_THEME: Theme = Theme {
+const DARK_THEME: Theme<Rgb565> = Theme {
     font: FontKind::Bitmap(FONT_7X13),
     bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
     standard: ViewStyle {
@@ -495,7 +495,7 @@ const DARK_THEME: Theme = Theme {
 };
 
 //https://lospec.com/palette-list/ice-cream-gb
-const ICE_CREAM_THEME: Theme = Theme {
+const ICE_CREAM_THEME: Theme<Rgb565> = Theme {
     font: FontKind::Bitmap(FONT_7X13),
     bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
     standard: ViewStyle {
@@ -516,7 +516,7 @@ const ICE_CREAM_THEME: Theme = Theme {
     },
 };
 //https://lospec.com/palette-list/minty-fresh
-const MINTY_FRESH: Theme = Theme {
+const MINTY_FRESH: Theme<Rgb565> = Theme {
     font: FontKind::Bitmap(FONT_7X13),
     bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
     standard: ViewStyle {
@@ -537,7 +537,7 @@ const MINTY_FRESH: Theme = Theme {
     },
 };
 //https://lospec.com/palette-list/amber-crtgb
-const AMBER: Theme = Theme {
+const AMBER: Theme<Rgb565> = Theme {
     font: FontKind::Bitmap(FONT_7X13),
     bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
     standard: ViewStyle {
@@ -558,7 +558,7 @@ const AMBER: Theme = Theme {
     },
 };
 
-const BLACK_WHITE_THEME: Theme = Theme {
+const BLACK_WHITE_THEME: Theme<Rgb565> = Theme {
     font: FontKind::Bitmap(FONT_7X13),
     bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
     standard: ViewStyle {
@@ -579,7 +579,7 @@ const BLACK_WHITE_THEME: Theme = Theme {
     },
 };
 
-fn copy_theme_colors(theme: &mut Theme, new: &Theme) {
+fn copy_theme_colors(theme: &mut Theme<Rgb565>, new: &Theme<Rgb565>) {
     theme.standard = new.standard.clone();
     theme.panel = new.panel.clone();
     theme.selected = new.selected.clone();

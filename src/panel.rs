@@ -2,6 +2,7 @@ use crate::DrawEvent;
 use crate::geom::Insets;
 use crate::view::{View, ViewId};
 use alloc::boxed::Box;
+use embedded_graphics::pixelcolor::PixelColor;
 
 pub struct PanelState {
     pub gap: i32,
@@ -25,7 +26,7 @@ impl PanelState {
     }
 }
 
-pub fn draw_std_panel(e: &mut DrawEvent) {
+pub fn draw_std_panel<C: PixelColor>(e: &mut DrawEvent<C>) {
     let bounds = e.view.bounds;
     e.ctx.fill_rect(&bounds, &e.theme.panel.fill);
     if let Some(state) = e.view.get_state::<PanelState>() {
@@ -35,7 +36,7 @@ pub fn draw_std_panel(e: &mut DrawEvent) {
     }
 }
 
-pub fn make_panel(name: &ViewId) -> View {
+pub fn make_panel<C: PixelColor>(name: &ViewId) -> View<C> {
     View {
         name: name.clone(),
         title: "title".into(),

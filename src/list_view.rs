@@ -7,9 +7,10 @@ use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use core::option::Option::Some;
+use embedded_graphics::pixelcolor::PixelColor;
 use log::info;
 
-pub fn make_list_view(name: &ViewId, data: Vec<&str>, selected: usize) -> View {
+pub fn make_list_view<C: PixelColor>(name: &ViewId, data: Vec<&str>, selected: usize) -> View<C> {
     View {
         name: name.clone(),
         title: name.to_string(),
@@ -48,7 +49,7 @@ impl ListState {
     }
 }
 
-fn input_list(e: &mut GuiEvent) -> Option<OutputAction> {
+fn input_list<C: PixelColor>(e: &mut GuiEvent<C>) -> Option<OutputAction> {
     match &e.event_type {
         InputEvent::PointerUp(pt) => {
             e.scene.mark_dirty_view(e.target);
@@ -104,7 +105,7 @@ fn input_list(e: &mut GuiEvent) -> Option<OutputAction> {
     None
 }
 
-fn draw_list(e: &mut DrawEvent) {
+fn draw_list<C: PixelColor>(e: &mut DrawEvent<C>) {
     let bounds = e.view.bounds;
     e.ctx.fill_rect(&e.view.bounds, &e.theme.standard.fill);
     let name = e.view.name.clone();
@@ -145,7 +146,7 @@ fn draw_list(e: &mut DrawEvent) {
     e.ctx.stroke_rect(&e.view.bounds, &e.theme.standard.text);
 }
 
-fn layout_list(e: &mut LayoutEvent) {
+fn layout_list<C: PixelColor>(e: &mut LayoutEvent<C>) {
     if let Some(state) = e.scene.get_view_state::<ListState>(e.target) {
         let ch = e.theme.font.char_height();
         let content_height = state.items.len() as i32 * ch * 2;
@@ -173,13 +174,14 @@ mod tests {
     use crate::view::{Flex, View, ViewId};
     use alloc::boxed::Box;
     use alloc::vec;
+    use embedded_graphics::pixelcolor::Rgb565;
 
     #[test]
     fn test_list_view_enter_with_stale_selected_no_panic() {
         use crate::input::{InputEvent, TextAction};
         use crate::scene::event_at_focused;
         let theme = MockDrawingContext::make_mock_theme();
-        let mut scene: Scene = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
+        let mut scene: Scene<Rgb565> = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
         let listview = ViewId::new("listview");
         {
             let list = make_list_view(&listview, vec!["A", "B", "C"], 2);
@@ -200,7 +202,7 @@ mod tests {
     #[test]
     fn test_list_view() {
         let theme = MockDrawingContext::make_mock_theme();
-        let mut scene: Scene = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
+        let mut scene: Scene<Rgb565> = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
 
         let listview = ViewId::new("listview");
         {

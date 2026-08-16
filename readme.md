@@ -240,7 +240,20 @@ should be used for:
 * **font**: the default font used for all text.
 * **bold_font**: the bold variant of the current font. Used for button titles.
 
-Each color group is a `ViewStyle { fill: Rgb565, text: Rgb565 }`.
+Each color group is a `ViewStyle<C> { fill: C, text: C }`.
+
+### Color modes
+
+`Theme`, `View`, `Scene`, and every widget constructor are generic over a color type `C` — any
+`embedded_graphics::pixelcolor::PixelColor` (`Rgb565`, `Rgb888`, `Gray8`, `BinaryColor`, etc.) can be used. Most
+call sites never need to write `<C>` explicitly: it's inferred from whatever theme/display you construct the scene
+with. `BW_THEME` is a ready-made `Theme<Rgb565>`; for other color types, build your own `Theme<C>` literal.
+
+On the device side, `EmbeddedDrawingContext<'a, T, C>` wraps an `embedded_graphics::DrawTarget` `T` and converts your
+theme's logical color `C` into the display's native color `T::Color` via the `FromColor<C>` trait (in `iris_ui::device`).
+This is what lets one `Scene<Rgb565>` drive both a full-color display and a 1-bit e-paper display side by side — see
+`examples/simulator.rs`, which runs the same `Theme<Rgb565>` against both a `Rgb565` `SimulatorDisplay` and a
+`BinaryColor` one.
 
 ### Fonts
 

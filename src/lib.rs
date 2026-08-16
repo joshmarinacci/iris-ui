@@ -8,7 +8,7 @@ use crate::input::{InputEvent, OutputAction};
 use crate::scene::Scene;
 use crate::view::ViewId;
 use embedded_graphics::mono_font::ascii::{FONT_7X13, FONT_7X13_BOLD};
-use embedded_graphics::pixelcolor::{Rgb565, RgbColor};
+use embedded_graphics::pixelcolor::{PixelColor, Rgb565, RgbColor};
 use geom::Bounds;
 use gfx::DrawingContext;
 use view::View;
@@ -35,53 +35,53 @@ pub mod view;
 
 pub use font::FontKind;
 
-pub struct DrawEvent<'a> {
-    pub ctx: &'a mut dyn DrawingContext,
-    pub theme: &'a Theme,
+pub struct DrawEvent<'a, C: PixelColor> {
+    pub ctx: &'a mut dyn DrawingContext<C>,
+    pub theme: &'a Theme<C>,
     pub focused: &'a Option<ViewId>,
-    pub view: &'a mut View,
+    pub view: &'a mut View<C>,
     pub bounds: &'a Bounds,
 }
 
-pub type DrawFn = fn(event: &mut DrawEvent);
-pub type LayoutFn = fn(layout: &mut LayoutEvent);
-pub type InputFn = fn(event: &mut GuiEvent) -> Option<OutputAction>;
+pub type DrawFn<C> = fn(event: &mut DrawEvent<C>);
+pub type LayoutFn<C> = fn(layout: &mut LayoutEvent<C>);
+pub type InputFn<C> = fn(event: &mut GuiEvent<C>) -> Option<OutputAction>;
 
 #[derive(Debug, Clone, Copy)]
-pub struct Theme {
+pub struct Theme<C: PixelColor> {
     pub font: FontKind,
     pub bold_font: FontKind,
-    pub standard: ViewStyle,
-    pub accented: ViewStyle,
-    pub selected: ViewStyle,
-    pub panel: ViewStyle,
+    pub standard: ViewStyle<C>,
+    pub accented: ViewStyle<C>,
+    pub selected: ViewStyle<C>,
+    pub panel: ViewStyle<C>,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct ViewStyle {
-    pub fill: Rgb565,
-    pub text: Rgb565,
+pub struct ViewStyle<C: PixelColor> {
+    pub fill: C,
+    pub text: C,
 }
 
-pub type Callback = fn(event: &mut GuiEvent);
+pub type Callback<C> = fn(event: &mut GuiEvent<C>);
 
 #[derive(Debug)]
-pub struct GuiEvent<'a> {
-    pub scene: &'a mut Scene,
+pub struct GuiEvent<'a, C: PixelColor> {
+    pub scene: &'a mut Scene<C>,
     pub target: &'a ViewId,
     pub event_type: InputEvent,
     pub action: Option<OutputAction>,
 }
 
 #[derive(Debug)]
-pub struct LayoutEvent<'a> {
-    pub scene: &'a mut Scene,
+pub struct LayoutEvent<'a, C: PixelColor> {
+    pub scene: &'a mut Scene<C>,
     pub target: &'a ViewId,
     pub space: Size,
-    pub theme: &'a Theme,
+    pub theme: &'a Theme<C>,
 }
 
-impl<'a> LayoutEvent<'a> {
+impl<'a, C: PixelColor> LayoutEvent<'a, C> {
     pub(crate) fn layout_all_children(&mut self, name: &ViewId, space: Size) {
         let fixed_kids = self.scene.get_children_ids(name).to_vec();
         for kid in &fixed_kids {
@@ -103,7 +103,7 @@ impl<'a> LayoutEvent<'a> {
     }
 }
 
-pub const BW_THEME: Theme = Theme {
+pub const BW_THEME: Theme<Rgb565> = Theme {
     standard: ViewStyle {
         fill: Rgb565::WHITE,
         text: Rgb565::BLACK,
@@ -147,7 +147,7 @@ mod tests {
 
     extern crate std;
 
-    pub fn make_simple_view(name: &ViewId) -> View {
+    pub fn make_simple_view(name: &ViewId) -> View<Rgb565> {
         View {
             name: name.clone(),
             title: name.to_string(),
@@ -160,7 +160,7 @@ mod tests {
             ..Default::default()
         }
     }
-    fn layout_vbox(evt: &mut LayoutEvent) {
+    fn layout_vbox(evt: &mut LayoutEvent<Rgb565>) {
         if let Some(parent) = evt.scene.get_view_mut(evt.target) {
             let mut y = 0;
             let bounds = parent.bounds;
@@ -175,7 +175,7 @@ mod tests {
             }
         }
     }
-    fn make_vbox(name: &ViewId, bounds: Bounds) -> View {
+    fn make_vbox(name: &ViewId, bounds: Bounds) -> View<Rgb565> {
         View {
             name: name.clone(),
             title: name.to_string(),
@@ -194,7 +194,7 @@ mod tests {
         drawn: bool,
         got_input: bool,
     }
-    fn make_test_button(name: &ViewId) -> View {
+    fn make_test_button(name: &ViewId) -> View<Rgb565> {
         View {
             name: name.clone(),
             title: name.to_string(),
@@ -225,7 +225,7 @@ mod tests {
             ..Default::default()
         }
     }
-    fn make_text_box(name: &ViewId, title: &str) -> View {
+    fn make_text_box(name: &ViewId, title: &str) -> View<Rgb565> {
         View {
             name: name.clone(),
             title: title.into(),
@@ -252,14 +252,14 @@ mod tests {
             ..Default::default()
         }
     }
-    fn draw_label_view(e: &mut DrawEvent) {
+    fn draw_label_view(e: &mut DrawEvent<Rgb565>) {
         e.ctx.fill_text(
             &e.view.bounds,
             &e.view.title,
             &TextStyle::new(e.theme.font, &e.theme.standard.text),
         );
     }
-    fn make_label(name: &ViewId) -> View {
+    fn make_label(name: &ViewId) -> View<Rgb565> {
         View {
             name: name.clone(),
             title: name.to_string(),
@@ -272,7 +272,7 @@ mod tests {
             ..Default::default()
         }
     }
-    fn was_button_clicked(scene: &mut Scene, name: &ViewId) -> bool {
+    fn was_button_clicked(scene: &mut Scene<Rgb565>, name: &ViewId) -> bool {
         scene
             .get_view(name)
             .unwrap()
@@ -283,7 +283,7 @@ mod tests {
             .unwrap()
             .got_input
     }
-    fn was_button_drawn(scene: &mut Scene, name: &ViewId) -> bool {
+    fn was_button_drawn(scene: &mut Scene<Rgb565>, name: &ViewId) -> bool {
         scene
             .get_view(name)
             .unwrap()
@@ -295,7 +295,7 @@ mod tests {
             .drawn
     }
 
-    fn repaint(scene: &mut Scene) {
+    fn repaint(scene: &mut Scene<Rgb565>) {
         let theme = MockDrawingContext::make_mock_theme();
         let mut ctx = MockDrawingContext::new(scene);
         draw_scene(scene, &mut ctx, &theme);
@@ -304,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_pick_at() {
-        let mut scene: Scene = Scene::new();
+        let mut scene: Scene<Rgb565> = Scene::new();
         let vbox = make_vbox(&"parent".into(), Bounds::new(10, 10, 100, 100));
 
         let mut button = make_test_button(&ViewId::new("child"));
@@ -320,7 +320,7 @@ mod tests {
     fn test_layout() {
         let parent: ViewId = "parent".into();
         let theme = MockDrawingContext::make_mock_theme();
-        let mut scene: Scene = Scene::new();
+        let mut scene: Scene<Rgb565> = Scene::new();
         // add panel
         scene.add_view(make_vbox(&parent, Bounds::new(10, 10, 100, 100)));
         // add button 1
@@ -364,8 +364,8 @@ mod tests {
     }
     #[test]
     fn test_events() {
-        let mut scene: Scene = Scene::new();
-        let mut handlers: Vec<Callback> = vec![];
+        let mut scene: Scene<Rgb565> = Scene::new();
+        let mut handlers: Vec<Callback<Rgb565>> = vec![];
         handlers.push(|event| {
             info!("got an event {:?}", event);
             if let Some(view) = event.scene.get_view_mut(event.target) {
@@ -385,7 +385,7 @@ mod tests {
         click_at(&mut scene, &handlers, Point::new(5, 5));
         assert_eq!(scene.get_view(&"root".into()).unwrap().visible, false);
     }
-    fn handle_toggle_button_input(event: &mut GuiEvent) -> Option<OutputAction> {
+    fn handle_toggle_button_input(event: &mut GuiEvent<Rgb565>) -> Option<OutputAction> {
         // info!("view clicked {:?}", event.event_type);
         if let Some(view) = event.scene.get_view_mut(event.target) {
             view.state.insert(Box::new(String::from("enabled")));
@@ -485,7 +485,7 @@ mod tests {
         assert_eq!(was_button_drawn(&mut scene, &"button1".into()), true);
         assert_eq!(was_button_drawn(&mut scene, &"button2".into()), false);
 
-        let mut handlers: Vec<Callback> = vec![];
+        let mut handlers: Vec<Callback<Rgb565>> = vec![];
         handlers.push(|e| {
             info!("clicked on {}", e.target);
             if let Some(view) = e.scene.get_view_mut(&"button2".into()) {
@@ -510,7 +510,7 @@ mod tests {
     #[test]
     fn test_keyboard_events() {
         // make scene
-        let mut scene: Scene = Scene::new();
+        let mut scene: Scene<Rgb565> = Scene::new();
 
         // make text box
         let text_box = make_text_box(&ViewId::new("textbox1"), "foo");
@@ -651,7 +651,7 @@ mod tests {
         assert_eq!(scene.dirty_rect, Bounds::new(15, 15, 120, 30));
     }
 
-    fn get_view_title(scene: &Scene, name: ViewId) -> String {
+    fn get_view_title(scene: &Scene<Rgb565>, name: ViewId) -> String {
         scene.get_view(&name).unwrap().title.clone()
     }
 }

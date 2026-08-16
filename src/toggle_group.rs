@@ -8,8 +8,9 @@ use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use core::option::Option::Some;
+use embedded_graphics::pixelcolor::PixelColor;
 
-pub fn make_toggle_group(name: &ViewId, data: Vec<&str>, selected: usize) -> View {
+pub fn make_toggle_group<C: PixelColor>(name: &ViewId, data: Vec<&str>, selected: usize) -> View<C> {
     View {
         name: name.clone(),
         title: name.to_string(),
@@ -39,7 +40,7 @@ impl SelectOneOfState {
     }
 }
 
-pub fn input_toggle_group(e: &mut GuiEvent) -> Option<OutputAction> {
+pub fn input_toggle_group<C: PixelColor>(e: &mut GuiEvent<C>) -> Option<OutputAction> {
     match &e.event_type {
         InputEvent::PointerUp(pt) => {
             e.scene.mark_dirty_view(e.target);
@@ -65,7 +66,7 @@ pub fn input_toggle_group(e: &mut GuiEvent) -> Option<OutputAction> {
     None
 }
 
-fn draw_toggle_group(e: &mut DrawEvent) {
+fn draw_toggle_group<C: PixelColor>(e: &mut DrawEvent<C>) {
     let bounds = e.view.bounds;
     e.ctx.fill_rect(&e.view.bounds, &e.theme.standard.fill);
     let name = e.view.name.clone();
@@ -113,7 +114,7 @@ fn draw_toggle_group(e: &mut DrawEvent) {
     e.ctx.stroke_rect(&e.view.bounds, &e.theme.standard.text);
 }
 
-pub fn layout_toggle_group(pass: &mut LayoutEvent) {
+pub fn layout_toggle_group<C: PixelColor>(pass: &mut LayoutEvent<C>) {
     if let Some(view) = pass.scene.get_view_mut(pass.target) {
         let cw = pass.theme.font.char_width();
         let ch = pass.theme.font.char_height();
@@ -150,11 +151,12 @@ mod tests {
     use crate::toggle_group::{SelectOneOfState, make_toggle_group};
     use crate::view::ViewId;
     use alloc::vec;
+    use embedded_graphics::pixelcolor::Rgb565;
 
     #[test]
     fn test_toggle_group_empty_no_panic() {
         let theme = MockDrawingContext::make_mock_theme();
-        let mut scene: Scene = Scene::new_with_bounds(Bounds::new(0, 0, 100, 240));
+        let mut scene: Scene<Rgb565> = Scene::new_with_bounds(Bounds::new(0, 0, 100, 240));
         {
             let group = make_toggle_group(&ViewId::new("group"), vec![], 0);
             scene.add_view_to_root(group);
@@ -170,7 +172,7 @@ mod tests {
     #[test]
     fn test_toggle_group() {
         let theme = MockDrawingContext::make_mock_theme();
-        let mut scene: Scene = Scene::new_with_bounds(Bounds::new(0, 0, 100, 240));
+        let mut scene: Scene<Rgb565> = Scene::new_with_bounds(Bounds::new(0, 0, 100, 240));
         {
             let group = make_toggle_group(&ViewId::new("group"), vec!["A", "BB", "CCC"], 0);
             scene.add_view_to_root(group);

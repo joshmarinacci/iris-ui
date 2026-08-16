@@ -24,6 +24,7 @@ use iris_ui::scene::{draw_scene, pointer_down_at, pointer_up_at};
 use iris_ui::text_input::make_text_input;
 use iris_ui::view::{Flex, View, ViewId};
 use iris_ui::BW_THEME;
+use embedded_graphics::pixelcolor::Rgb565;
 use log::info;
 
 use esp_hal::i2c::master::{BusTimeout, Config as I2CConfig, I2c};
@@ -156,7 +157,7 @@ fn main() -> ! {
     }
 }
 
-fn make_gui_scene() -> Scene {
+fn make_gui_scene() -> Scene<Rgb565> {
     let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
 
     let panel = View {

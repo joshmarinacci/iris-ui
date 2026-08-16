@@ -20,7 +20,7 @@ pub struct MockDrawingContext {
 }
 
 impl MockDrawingContext {
-    pub fn new(scene: &Scene) -> MockDrawingContext {
+    pub fn new(scene: &Scene<Rgb565>) -> MockDrawingContext {
         let mut ctx: MockDrawingContext = MockDrawingContext {
             clip_rect: scene.dirty_rect,
             display: MockDisplay::new(),
@@ -30,7 +30,7 @@ impl MockDrawingContext {
         ctx.display.set_allow_overdraw(true);
         ctx
     }
-    pub fn make_mock_theme() -> Theme {
+    pub fn make_mock_theme() -> Theme<Rgb565> {
         Theme {
             font: FontKind::Bitmap(FONT_6X10),
             bold_font: FontKind::Bitmap(FONT_7X13_BOLD),
@@ -53,7 +53,7 @@ impl MockDrawingContext {
         }
     }
 }
-impl DrawingContext for MockDrawingContext {
+impl DrawingContext<Rgb565> for MockDrawingContext {
     fn fill_rect(&mut self, bounds: &Bounds, color: &Rgb565) {
         util::bounds_to_rect(bounds)
             .intersection(&util::bounds_to_rect(&self.clip_rect))
@@ -77,7 +77,7 @@ impl DrawingContext for MockDrawingContext {
             .unwrap();
     }
 
-    fn fill_text(&mut self, bounds: &Bounds, text: &str, style: &TextStyle) {
+    fn fill_text(&mut self, bounds: &Bounds, text: &str, style: &TextStyle<Rgb565>) {
         match style.font {
             FontKind::Bitmap(mono_font) => {
                 let mono_style = MonoTextStyle::new(&mono_font, *style.color);
@@ -97,7 +97,7 @@ impl DrawingContext for MockDrawingContext {
         }
     }
 
-    fn text(&mut self, _text: &str, _position: &Point, _style: &TextStyle) {}
+    fn text(&mut self, _text: &str, _position: &Point, _style: &TextStyle<Rgb565>) {}
 
     fn translate(&mut self, offset: &Point) {
         self.offset = self.offset + *offset;

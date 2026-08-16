@@ -13,24 +13,26 @@ use embedded_graphics::prelude::{DrawTarget, RgbColor};
 use embedded_graphics::primitives::{Line, Primitive, PrimitiveStyle, Rectangle};
 use embedded_graphics::text::{Alignment, Baseline, Text, TextStyleBuilder};
 
-/// Converts an `Rgb565` color to the display's native color type.
-/// Implement this for any color type you want to drive with `EmbeddedDrawingContext`.
-pub trait FromRgb565: PixelColor {
-    fn from_rgb565(color: Rgb565) -> Self;
+/// Converts a logical/theme color `Src` into the display's native color type.
+/// Implement this for any (native, logical) color pair you want to drive with
+/// `EmbeddedDrawingContext`.
+pub trait FromColor<Src: PixelColor>: PixelColor {
+    fn from_color(color: Src) -> Self;
 }
 
-impl FromRgb565 for Rgb565 {
+/// Identity conversion: a display whose native color matches the theme's logical color.
+impl<C: PixelColor> FromColor<C> for C {
     #[inline]
-    fn from_rgb565(color: Rgb565) -> Self {
+    fn from_color(color: C) -> Self {
         color
     }
 }
 
-impl FromRgb565 for BinaryColor {
+impl FromColor<Rgb565> for BinaryColor {
     /// Black maps to `On` (ink/foreground); any other color maps to `Off` (paper/background).
     /// This matches `LcdWhite` where On=dark ink, Off=light paper.
     #[inline]
-    fn from_rgb565(color: Rgb565) -> Self {
+    fn from_color(color: Rgb565) -> Self {
         if color == Rgb565::BLACK {
             BinaryColor::On
         } else {
@@ -39,21 +41,24 @@ impl FromRgb565 for BinaryColor {
     }
 }
 
-pub struct EmbeddedDrawingContext<'a, T>
+pub struct EmbeddedDrawingContext<'a, T, C = <T as DrawTarget>::Color>
 where
     T: DrawTarget,
-    T::Color: FromRgb565,
+    T::Color: FromColor<C>,
+    C: PixelColor,
 {
     pub display: &'a mut T,
     pub clip: Bounds,
     offset: EPoint,
     scale: u32,
+    _logical_color: core::marker::PhantomData<C>,
 }
 
-impl<'a, T> EmbeddedDrawingContext<'a, T>
+impl<'a, T, C> EmbeddedDrawingContext<'a, T, C>
 where
     T: DrawTarget,
-    T::Color: FromRgb565,
+    T::Color: FromColor<C>,
+    C: PixelColor,
 {
     pub fn new(display: &'a mut T) -> Self {
         EmbeddedDrawingContext {
@@ -61,6 +66,7 @@ where
             clip: Bounds::new_empty(),
             offset: EPoint::new(0, 0),
             scale: 1,
+            _logical_color: core::marker::PhantomData,
         }
     }
 
@@ -70,6 +76,7 @@ where
             clip: Bounds::new_empty(),
             offset: EPoint::new(0, 0),
             scale,
+            _logical_color: core::marker::PhantomData,
         }
     }
 }
@@ -158,13 +165,14 @@ fn draw_ttf_glyphs<T: DrawTarget>(
     }
 }
 
-impl<'a, T> DrawingContext for EmbeddedDrawingContext<'a, T>
+impl<'a, T, C> DrawingContext<C> for EmbeddedDrawingContext<'a, T, C>
 where
     T: DrawTarget,
-    T::Color: FromRgb565,
+    T::Color: FromColor<C>,
+    C: PixelColor,
 {
-    fn fill_rect(&mut self, bounds: &Bounds, color: &Rgb565) {
-        let c = T::Color::from_rgb565(*color);
+    fn fill_rect(&mut self, bounds: &Bounds, color: &C) {
+        let c = T::Color::from_color(*color);
         let mut display = self.display.clipped(&bounds_to_rect(&self.clip));
         let mut display = display.translated(self.offset);
         let _ = bounds_to_scaled_rect(bounds, self.scale)
@@ -172,8 +180,8 @@ where
             .draw(&mut display);
     }
 
-    fn stroke_rect(&mut self, bounds: &Bounds, color: &Rgb565) {
-        let c = T::Color::from_rgb565(*color);
+    fn stroke_rect(&mut self, bounds: &Bounds, color: &C) {
+        let c = T::Color::from_color(*color);
         let mut display = self.display.clipped(&bounds_to_rect(&self.clip));
         let mut display = display.translated(self.offset);
         let _ = bounds_to_scaled_rect(bounds, self.scale)
@@ -181,8 +189,8 @@ where
             .draw(&mut display);
     }
 
-    fn line(&mut self, start: &GPoint, end: &GPoint, color: &Rgb565) {
-        let c = T::Color::from_rgb565(*color);
+    fn line(&mut self, start: &GPoint, end: &GPoint, color: &C) {
+        let c = T::Color::from_color(*color);
         let s = self.scale as i32;
         let mut display = self.display.clipped(&bounds_to_rect(&self.clip));
         let mut display = display.translated(self.offset);
@@ -195,10 +203,10 @@ where
             .draw(&mut display);
     }
 
-    fn fill_text(&mut self, bounds: &Bounds, text: &str, text_style: &TextStyle) {
+    fn fill_text(&mut self, bounds: &Bounds, text: &str, text_style: &TextStyle<C>) {
         match text_style.font {
             FontKind::Bitmap(mono_font) => {
-                let c = T::Color::from_rgb565(*text_style.color);
+                let c = T::Color::from_color(*text_style.color);
                 let mut text_builder = MonoTextStyleBuilder::new().font(&mono_font).text_color(c);
                 if text_style.underline {
                     text_builder = text_builder.underline();
@@ -260,7 +268,7 @@ where
                 };
                 // Center the baseline vertically within bounds
                 let baseline_y = bounds.position.y + bounds.size.h / 2 + (size * 0.25) as i32;
-                let color = T::Color::from_rgb565(*text_style.color);
+                let color = T::Color::from_color(*text_style.color);
 
                 if self.scale == 1 {
                     let mut display = self.display.clipped(&bounds_to_rect(&self.clip));
@@ -281,10 +289,10 @@ where
         }
     }
 
-    fn text(&mut self, text: &str, position: &GPoint, style: &TextStyle) {
+    fn text(&mut self, text: &str, position: &GPoint, style: &TextStyle<C>) {
         match style.font {
             FontKind::Bitmap(mono_font) => {
-                let c = T::Color::from_rgb565(*style.color);
+                let c = T::Color::from_color(*style.color);
                 let mut text_builder = MonoTextStyleBuilder::new().font(&mono_font).text_color(c);
                 if style.underline {
                     text_builder = text_builder.underline();
@@ -352,7 +360,7 @@ where
                     }
                     Align::Start | Align::End => position.y,
                 };
-                let color = T::Color::from_rgb565(*style.color);
+                let color = T::Color::from_color(*style.color);
                 if self.scale == 1 {
                     let mut display = self.display.clipped(&bounds_to_rect(&self.clip));
                     let mut display = display.translated(self.offset);
@@ -377,8 +385,8 @@ where
         self.offset = self.offset.add(EPoint::new(offset.x * s, offset.y * s));
     }
 
-    fn put_pixel(&mut self, x: i32, y: i32, color: &Rgb565) {
-        let c = T::Color::from_rgb565(*color);
+    fn put_pixel(&mut self, x: i32, y: i32, color: &C) {
+        let c = T::Color::from_color(*color);
         if self.scale == 1 {
             let mut display = self.display.clipped(&bounds_to_rect(&self.clip));
             let mut display = display.translated(self.offset);

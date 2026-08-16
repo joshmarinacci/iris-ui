@@ -6,14 +6,15 @@ use crate::{Callback, DrawEvent, GuiEvent, LayoutEvent, LayoutFn, Theme};
 use alloc::string::ToString;
 use alloc::vec::Vec;
 use alloc::{format, vec};
+use embedded_graphics::pixelcolor::PixelColor;
 use hashbrown::HashMap;
 use log::{info, warn};
 
 /// The top level object of the UI tree
 #[derive(Debug)]
-pub struct Scene {
+pub struct Scene<C: PixelColor> {
     count: u32,
-    pub(crate) keys: HashMap<ViewId, View>,
+    pub(crate) keys: HashMap<ViewId, View<C>>,
     children: HashMap<ViewId, Vec<ViewId>>,
     parents: HashMap<ViewId, ViewId>,
     pub(crate) dirty: bool,
@@ -26,7 +27,7 @@ pub struct Scene {
     scale: u32,
 }
 
-impl Scene {
+impl<C: PixelColor> Scene<C> {
     /// print a textual representation of the view tree to info. Used for debugging.
     pub fn dump(&self) {
         info!("scene");
@@ -51,7 +52,7 @@ impl Scene {
     }
 }
 
-impl Scene {
+impl<C: PixelColor> Scene<C> {
     /// Get the ViewID of the root of the view tree.
     pub fn root_id(&self) -> ViewId {
         self.root_id.clone()
@@ -158,7 +159,7 @@ impl Scene {
     }
 
     /// Get the children of the view filtered by a callback function.
-    pub fn get_children_ids_filtered(&self, id: &ViewId, cb: fn(&View) -> bool) -> Vec<ViewId> {
+    pub fn get_children_ids_filtered(&self, id: &ViewId, cb: fn(&View<C>) -> bool) -> Vec<ViewId> {
         self.get_children_ids(id)
             .iter()
             .filter_map(|kid| self.get_view(kid))
@@ -173,12 +174,12 @@ impl Scene {
     }
 
     /// Get the View struct for a ViewID.
-    pub fn get_view(&self, name: &ViewId) -> Option<&View> {
+    pub fn get_view(&self, name: &ViewId) -> Option<&View<C>> {
         self.keys.get(name)
     }
 
     /// Mutably get View struct for a ViewID.
-    pub fn get_view_mut(&mut self, name: &ViewId) -> Option<&mut View> {
+    pub fn get_view_mut(&mut self, name: &ViewId) -> Option<&mut View<C>> {
         self.keys.get_mut(name)
     }
 
@@ -192,7 +193,7 @@ impl Scene {
         None
     }
     /// Get the layout function, if any, for a ViewID.
-    pub fn get_view_layout(&mut self, name: &ViewId) -> Option<LayoutFn> {
+    pub fn get_view_layout(&mut self, name: &ViewId) -> Option<LayoutFn<C>> {
         if let Some(view) = self.get_view_mut(name) {
             return view.layout;
         }
@@ -211,7 +212,7 @@ impl Scene {
     }
 
     /// Remove View from the scene.
-    pub fn remove_view(&mut self, name: &ViewId) -> Option<View> {
+    pub fn remove_view(&mut self, name: &ViewId) -> Option<View<C>> {
         self.mark_dirty_view(name);
         self.keys.remove(name)
     }
@@ -236,7 +237,7 @@ impl Scene {
     }
 
     /// Create a new scene with the specified bounds.
-    pub fn new_with_bounds(bounds: Bounds) -> Scene {
+    pub fn new_with_bounds(bounds: Bounds) -> Scene<C> {
         let root_id = ViewId::new("root");
         let root = View {
             name: root_id.clone(),
@@ -249,7 +250,7 @@ impl Scene {
             draw: Some(|e| e.ctx.fill_rect(&e.view.bounds, &e.theme.panel.fill)),
             ..Default::default()
         };
-        let mut keys: HashMap<ViewId, View> = HashMap::new();
+        let mut keys: HashMap<ViewId, View<C>> = HashMap::new();
         keys.insert(root_id.clone(), root);
         Scene {
             bounds,
@@ -269,7 +270,7 @@ impl Scene {
 
     /// Create a new scene with the specified bounds and an integer scale factor.
     /// Scale is applied at the rendering boundary — layout and input remain in logical pixels.
-    pub fn new_with_scale(bounds: Bounds, scale: u32) -> Scene {
+    pub fn new_with_scale(bounds: Bounds, scale: u32) -> Scene<C> {
         let mut scene = Self::new_with_bounds(bounds);
         scene.scale = scale;
         scene
@@ -280,12 +281,12 @@ impl Scene {
         self.scale
     }
 
-    pub(crate) fn new() -> Scene {
+    pub(crate) fn new() -> Scene<C> {
         let bounds = Bounds::new(0, 0, 200, 200);
         Self::new_with_bounds(bounds)
     }
 
-    pub(crate) fn add_view(&mut self, view: View) {
+    pub(crate) fn add_view(&mut self, view: View<C>) {
         let name = view.name.clone();
         if self.keys.contains_key(&name) {
             warn!("might be adding duplicate view key {name}");
@@ -295,11 +296,11 @@ impl Scene {
         self.mark_dirty_view(&name);
     }
     /// Add a View to the root of the scene. The scene takes ownership of the View.
-    pub fn add_view_to_root(&mut self, view: View) {
+    pub fn add_view_to_root(&mut self, view: View<C>) {
         self.add_view_to_parent(view, &self.root_id.clone());
     }
     /// Add a View as a child of a view already in the scene. The scene takes ownership of the View.
-    pub fn add_view_to_parent(&mut self, view: View, parent: &ViewId) {
+    pub fn add_view_to_parent(&mut self, view: View<C>, parent: &ViewId) {
         if !self.children.contains_key(parent) {
             self.children.insert(parent.clone(), vec![]);
         }
@@ -328,7 +329,7 @@ impl Scene {
         self.remove_view(name);
     }
 
-    fn get_view_global_bounds(&self, view: &View) -> Bounds {
+    fn get_view_global_bounds(&self, view: &View<C>) -> Bounds {
         let mut current = &view.name;
         let mut offset = Point::zero();
         while let Some(parent) = self.parents.get(current) {
@@ -341,7 +342,7 @@ impl Scene {
     }
 }
 
-impl Scene {
+impl<C: PixelColor> Scene<C> {
     // resize the scene
     pub fn resize(&mut self, bounds: Bounds) {
         self.bounds = bounds;
@@ -350,7 +351,7 @@ impl Scene {
     }
 }
 
-fn layout_root_panel(pass: &mut LayoutEvent) {
+fn layout_root_panel<C: PixelColor>(pass: &mut LayoutEvent<C>) {
     if let Some(view) = pass.scene.get_view_mut(&pass.target) {
         view.bounds.size.w = pass.space.w;
         view.bounds.size.h = pass.space.h;
@@ -362,32 +363,44 @@ fn layout_root_panel(pass: &mut LayoutEvent) {
 }
 
 /// send a pointer-down event (mouse button pressed, or touch contact started) to the scene
-pub fn pointer_down_at(scene: &mut Scene, handlers: &[Callback], pt: Point) -> Option<InputResult> {
+pub fn pointer_down_at<C: PixelColor>(
+    scene: &mut Scene<C>,
+    handlers: &[Callback<C>],
+    pt: Point,
+) -> Option<InputResult> {
     dispatch_pointer_event(scene, handlers, pt, InputEvent::PointerDown)
 }
 
 /// send a pointer-up event (mouse button released, or touch contact ended) to the scene
-pub fn pointer_up_at(scene: &mut Scene, handlers: &[Callback], pt: Point) -> Option<InputResult> {
+pub fn pointer_up_at<C: PixelColor>(
+    scene: &mut Scene<C>,
+    handlers: &[Callback<C>],
+    pt: Point,
+) -> Option<InputResult> {
     dispatch_pointer_event(scene, handlers, pt, InputEvent::PointerUp)
 }
 
 /// Convenience helper that simulates a full click/tap: a pointer-down followed
 /// immediately by a pointer-up at the same point. Returns the result of the
 /// pointer-up dispatch, since that is where widgets (e.g. buttons) fire their action.
-pub fn click_at(scene: &mut Scene, handlers: &[Callback], pt: Point) -> Option<InputResult> {
+pub fn click_at<C: PixelColor>(
+    scene: &mut Scene<C>,
+    handlers: &[Callback<C>],
+    pt: Point,
+) -> Option<InputResult> {
     pointer_down_at(scene, handlers, pt.clone());
     pointer_up_at(scene, handlers, pt)
 }
 
-fn dispatch_pointer_event(
-    scene: &mut Scene,
-    handlers: &[Callback],
+fn dispatch_pointer_event<C: PixelColor>(
+    scene: &mut Scene<C>,
+    handlers: &[Callback<C>],
     pt: Point,
     make_event: fn(Point) -> InputEvent,
 ) -> Option<InputResult> {
     let targets = pick_at(scene, &pt);
     if let Some((target, pt)) = targets.last() {
-        let mut event: GuiEvent = GuiEvent {
+        let mut event: GuiEvent<C> = GuiEvent {
             scene,
             target,
             event_type: make_event(pt.clone()),
@@ -413,9 +426,12 @@ fn dispatch_pointer_event(
 }
 
 /// send a event to the focused element of the scene
-pub fn event_at_focused(scene: &mut Scene, event_type: &InputEvent) -> Option<InputResult> {
+pub fn event_at_focused<C: PixelColor>(
+    scene: &mut Scene<C>,
+    event_type: &InputEvent,
+) -> Option<InputResult> {
     if let Some(focused) = scene.focused.clone() {
-        let mut event: GuiEvent = GuiEvent {
+        let mut event: GuiEvent<C> = GuiEvent {
             scene,
             target: &focused,
             event_type: event_type.clone(),
@@ -438,11 +454,11 @@ pub fn event_at_focused(scene: &mut Scene, event_type: &InputEvent) -> Option<In
 type Pick = (ViewId, Point);
 
 /// Get a list of views which contain the point.
-pub fn pick_at(scene: &mut Scene, pt: &Point) -> Vec<Pick> {
+pub fn pick_at<C: PixelColor>(scene: &mut Scene<C>, pt: &Point) -> Vec<Pick> {
     pick_at_view(scene, pt, &scene.root_id)
 }
 
-fn pick_at_view(scene: &Scene, pt: &Point, name: &ViewId) -> Vec<Pick> {
+fn pick_at_view<C: PixelColor>(scene: &Scene<C>, pt: &Point, name: &ViewId) -> Vec<Pick> {
     let mut coll: Vec<Pick> = vec![];
     if let Some(view) = scene.keys.get(name) {
         if view.bounds.contains(pt) && view.visible {
@@ -458,7 +474,11 @@ fn pick_at_view(scene: &Scene, pt: &Point, name: &ViewId) -> Vec<Pick> {
 }
 
 /// Draw the scene to the drawing context with the provided theme.
-pub fn draw_scene(scene: &mut Scene, ctx: &mut dyn DrawingContext, theme: &Theme) {
+pub fn draw_scene<C: PixelColor>(
+    scene: &mut Scene<C>,
+    ctx: &mut dyn DrawingContext<C>,
+    theme: &Theme<C>,
+) {
     if scene.dirty {
         ctx.fill_rect(&scene.bounds, &theme.standard.fill);
         let name = scene.root_id.clone();
@@ -468,10 +488,10 @@ pub fn draw_scene(scene: &mut Scene, ctx: &mut dyn DrawingContext, theme: &Theme
     }
 }
 
-fn draw_view(
-    scene: &mut Scene,
-    ctx: &mut dyn DrawingContext,
-    theme: &Theme,
+fn draw_view<C: PixelColor>(
+    scene: &mut Scene<C>,
+    ctx: &mut dyn DrawingContext<C>,
+    theme: &Theme<C>,
     name: &ViewId,
     offset: Point,
 ) {
@@ -497,7 +517,7 @@ fn draw_view(
     let scene_bounds = scene.bounds;
     if let Some(view) = scene.get_view_mut(name) {
         if let Some(draw) = view.draw {
-            let mut de: DrawEvent = DrawEvent {
+            let mut de: DrawEvent<C> = DrawEvent {
                 theme,
                 view,
                 ctx,
@@ -519,7 +539,7 @@ fn draw_view(
 }
 
 /// Layout the scene with the provided theme
-pub fn layout_scene(scene: &mut Scene, theme: &Theme) {
+pub fn layout_scene<C: PixelColor>(scene: &mut Scene<C>, theme: &Theme<C>) {
     if scene.layout_dirty {
         let mut pass = LayoutEvent {
             target: &scene.root_id(),
@@ -540,10 +560,11 @@ mod tests {
     use crate::geom::Bounds;
     use crate::scene::Scene;
     use crate::view::ViewId;
+    use embedded_graphics::pixelcolor::Rgb565;
 
     #[test]
     fn remove_parent_and_children_cleans_grandchildren() {
-        let mut scene: Scene = Scene::new();
+        let mut scene: Scene<Rgb565> = Scene::new();
         let parent_id: ViewId = "parent".into();
         let child_id: ViewId = "child".into();
         let grandchild_id: ViewId = "grandchild".into();
@@ -569,7 +590,7 @@ mod tests {
 
     #[test]
     fn basic_add_remove() {
-        let mut scene: Scene = Scene::new_with_bounds(Bounds::new(0, 0, 100, 30));
+        let mut scene: Scene<Rgb565> = Scene::new_with_bounds(Bounds::new(0, 0, 100, 30));
         assert_eq!(scene.viewcount(), 1);
         let view = crate::tests::make_simple_view(&"foo".into());
         assert_eq!(scene.viewcount(), 1);
@@ -584,7 +605,7 @@ mod tests {
     }
     #[test]
     fn parent_child() {
-        let mut scene: Scene = Scene::new();
+        let mut scene: Scene<Rgb565> = Scene::new();
         let parent_id: ViewId = "parent".into();
         let child_id: ViewId = "child".into();
         let parent_view = crate::tests::make_simple_view(&parent_id);
@@ -623,12 +644,13 @@ mod dirty_rect_tests {
     use crate::view::{View, ViewId};
     use crate::DrawEvent;
     use alloc::boxed::Box;
+    use embedded_graphics::pixelcolor::Rgb565;
 
     struct DrawCounter {
         count: i32,
     }
 
-    fn counting_draw(e: &mut DrawEvent) {
+    fn counting_draw(e: &mut DrawEvent<Rgb565>) {
         if let Some(state) = e.view.get_state::<DrawCounter>() {
             state.count += 1;
         }
@@ -715,8 +737,9 @@ mod focus_disabled_tests {
     use crate::scene::{Scene, click_at, draw_scene};
     use crate::test::MockDrawingContext;
     use crate::view::{View, ViewId};
+    use embedded_graphics::pixelcolor::Rgb565;
 
-    fn make_button_scene() -> (Scene, ViewId) {
+    fn make_button_scene() -> (Scene<Rgb565>, ViewId) {
         let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 200, 200));
         let btn_id = ViewId::new("btn");
         scene.add_view_to_root(View {

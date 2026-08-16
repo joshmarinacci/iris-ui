@@ -5,6 +5,7 @@ use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use core::any::Any;
 use core::fmt::{Display, Formatter};
+use embedded_graphics::pixelcolor::PixelColor;
 
 /// The ID of a View. Should be unique for the lifetime of the application.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -53,7 +54,7 @@ pub enum Align {
 
 /// The primary UI component struct
 #[derive(Debug)]
-pub struct View {
+pub struct View<C: PixelColor> {
     /// The unique name of the view.
     pub name: ViewId,
 
@@ -82,82 +83,82 @@ pub struct View {
     pub state: Option<Box<dyn Any>>,
 
     /// an optional function to handle input events for this View
-    pub input: Option<InputFn>,
+    pub input: Option<InputFn<C>>,
 
     /// an optional function to perform layout for this View
-    pub layout: Option<LayoutFn>,
+    pub layout: Option<LayoutFn<C>>,
 
     /// an optional function to draw this View
-    pub draw: Option<DrawFn>,
+    pub draw: Option<DrawFn<C>>,
 }
 
-impl View {
-    pub fn with_name(mut self, name: ViewId) -> View {
+impl<C: PixelColor> View<C> {
+    pub fn with_name(mut self, name: ViewId) -> View<C> {
         self.name = name;
         self
     }
-    pub fn with_title(mut self, title: String) -> View {
+    pub fn with_title(mut self, title: String) -> View<C> {
         self.title = title;
         self
     }
-    pub fn with_bounds(mut self, bounds: Bounds) -> View {
+    pub fn with_bounds(mut self, bounds: Bounds) -> View<C> {
         self.bounds = bounds;
         self
     }
-    pub fn with_state(mut self, state: Option<Box<dyn Any>>) -> View {
+    pub fn with_state(mut self, state: Option<Box<dyn Any>>) -> View<C> {
         self.state = state;
         self
     }
-    pub fn with_input(mut self, input: Option<InputFn>) -> View {
+    pub fn with_input(mut self, input: Option<InputFn<C>>) -> View<C> {
         self.input = input;
         self
     }
-    pub fn with_layout(mut self, layout: Option<LayoutFn>) -> View {
+    pub fn with_layout(mut self, layout: Option<LayoutFn<C>>) -> View<C> {
         self.layout = layout;
         self
     }
-    pub fn with_draw(mut self, draw: Option<DrawFn>) -> View {
+    pub fn with_draw(mut self, draw: Option<DrawFn<C>>) -> View<C> {
         self.draw = draw;
         self
     }
-    pub fn with_flex(mut self, h_flex: Flex, v_flex: Flex) -> View {
+    pub fn with_flex(mut self, h_flex: Flex, v_flex: Flex) -> View<C> {
         self.h_flex = h_flex;
         self.v_flex = v_flex;
         self
     }
-    pub fn with_h_flex(mut self, flex: Flex) -> View {
+    pub fn with_h_flex(mut self, flex: Flex) -> View<C> {
         self.h_flex = flex;
         self
     }
-    pub fn with_v_flex(mut self, flex: Flex) -> View {
+    pub fn with_v_flex(mut self, flex: Flex) -> View<C> {
         self.v_flex = flex;
         self
     }
-    pub fn with_h_align(mut self, align: Align) -> View {
+    pub fn with_h_align(mut self, align: Align) -> View<C> {
         self.h_align = align;
         self
     }
-    pub fn with_v_align(mut self, align: Align) -> View {
+    pub fn with_v_align(mut self, align: Align) -> View<C> {
         self.v_align = align;
         self
     }
-    pub fn position_at(mut self, x: i32, y: i32) -> View {
+    pub fn position_at(mut self, x: i32, y: i32) -> View<C> {
         self.bounds.position.x = x;
         self.bounds.position.y = y;
         self
     }
-    pub fn with_size(mut self, w: i32, h: i32) -> View {
+    pub fn with_size(mut self, w: i32, h: i32) -> View<C> {
         self.bounds.size.w = w;
         self.bounds.size.h = h;
         self
     }
-    pub fn with_visible(mut self, visible: bool) -> View {
+    pub fn with_visible(mut self, visible: bool) -> View<C> {
         self.visible = visible;
         self
     }
 }
 
-impl View {
+impl<C: PixelColor> View<C> {
     pub fn get_state<T: 'static>(&mut self) -> Option<&mut T> {
         if let Some(view) = &mut self.state {
             return view.downcast_mut::<T>();
@@ -166,7 +167,7 @@ impl View {
     }
 }
 
-impl Default for View {
+impl<C: PixelColor> Default for View<C> {
     fn default() -> Self {
         let id: ViewId = ViewId::new("noname");
         View {

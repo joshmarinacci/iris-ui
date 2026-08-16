@@ -19,7 +19,7 @@ struct ProgressState {
     value: f32,
 }
 
-fn make_progress_bar(name: &ViewId) -> View {
+fn make_progress_bar(name: &ViewId) -> View<Rgb565> {
     View {
         name: name.clone(),
         title: "progress".into(),

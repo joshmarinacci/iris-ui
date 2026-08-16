@@ -9,6 +9,7 @@ use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use alloc::vec;
 use alloc::vec::Vec;
+use embedded_graphics::pixelcolor::PixelColor;
 use hashbrown::HashMap;
 use log::info;
 
@@ -25,12 +26,12 @@ impl LayoutPanelState {
     }
 }
 
-pub fn make_tabbed_panel(
+pub fn make_tabbed_panel<C: PixelColor>(
     name: &ViewId,
     data: Vec<&str>,
     selected: usize,
-    scene: &mut Scene,
-) -> View {
+    scene: &mut Scene<C>,
+) -> View<C> {
     let state = LayoutPanelState {
         data: vec![],
         contents: HashMap::new(),
@@ -98,7 +99,7 @@ pub fn make_tabbed_panel(
     }
 }
 
-pub fn layout_tabbed_panel(pass: &mut LayoutEvent) {
+pub fn layout_tabbed_panel<C: PixelColor>(pass: &mut LayoutEvent<C>) {
     if let Some(view) = pass.scene.get_view_mut(&pass.target) {
         // layout self
         if view.h_flex == Grow {

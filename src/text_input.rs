@@ -5,6 +5,7 @@ use crate::view::{Align, View, ViewId};
 use crate::{DrawEvent, GuiEvent};
 use alloc::boxed::Box;
 use alloc::string::String;
+use embedded_graphics::pixelcolor::PixelColor;
 use log::info;
 
 pub struct TextInputState {
@@ -43,7 +44,7 @@ impl TextInputState {
     }
 }
 
-fn draw_text_input(e: &mut DrawEvent) {
+fn draw_text_input<C: PixelColor>(e: &mut DrawEvent<C>) {
     e.ctx.fill_rect(&e.view.bounds, &e.theme.standard.fill);
     e.ctx.stroke_rect(&e.view.bounds, &e.theme.standard.text);
     let style = TextStyle::new(e.theme.font, &e.theme.standard.text).with_halign(Align::Start);
@@ -75,7 +76,7 @@ fn draw_text_input(e: &mut DrawEvent) {
     }
 }
 
-fn input_text_input(event: &mut GuiEvent) -> Option<OutputAction> {
+fn input_text_input<C: PixelColor>(event: &mut GuiEvent<C>) -> Option<OutputAction> {
     info!("text input got event {:?}", event.event_type);
     event.scene.mark_dirty_view(event.target);
     if let Some(state) = event.scene.get_view_state::<TextInputState>(event.target) {
@@ -180,7 +181,7 @@ mod tests {
     }
 }
 
-pub fn make_text_input(name: &ViewId, title: &str) -> View {
+pub fn make_text_input<C: PixelColor>(name: &ViewId, title: &str) -> View<C> {
     View {
         name: name.clone(),
         title: title.into(),

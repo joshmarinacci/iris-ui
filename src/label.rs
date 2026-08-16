@@ -2,8 +2,9 @@ use crate::gfx::TextStyle;
 use crate::util;
 use crate::view::Flex::Shrink;
 use crate::view::{View, ViewId};
+use embedded_graphics::pixelcolor::PixelColor;
 
-pub fn make_label(name: &ViewId, title: &str) -> View {
+pub fn make_label<C: PixelColor>(name: &ViewId, title: &str) -> View<C> {
     View {
         name: name.clone(),
         title: title.into(),
@@ -22,7 +23,7 @@ pub fn make_label(name: &ViewId, title: &str) -> View {
     }
 }
 
-pub fn make_header_label(name: &ViewId, title: &str) -> View {
+pub fn make_header_label<C: PixelColor>(name: &ViewId, title: &str) -> View<C> {
     View {
         name: name.clone(),
         title: title.into(),

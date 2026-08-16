@@ -4,7 +4,7 @@ use crate::view::{Align, View, ViewId};
 use crate::{DrawEvent, LayoutEvent};
 use alloc::boxed::Box;
 use alloc::string::ToString;
-use embedded_graphics::pixelcolor::{Rgb565, RgbColor};
+use embedded_graphics::pixelcolor::PixelColor;
 use hashbrown::HashMap;
 
 pub struct GridLayoutState {
@@ -88,7 +88,7 @@ impl LayoutConstraint {
     }
 }
 
-pub fn make_grid_panel(name: &ViewId) -> View {
+pub fn make_grid_panel<C: PixelColor>(name: &ViewId) -> View<C> {
     View {
         name: name.clone(),
         title: name.to_string(),
@@ -110,8 +110,9 @@ pub fn make_grid_panel(name: &ViewId) -> View {
     }
 }
 
-fn draw_grid(evt: &mut DrawEvent) {
+fn draw_grid<C: PixelColor>(evt: &mut DrawEvent<C>) {
     let bounds = evt.view.bounds;
+    let debug_color = evt.theme.accented.fill;
     evt.ctx
         .fill_rect(&evt.view.bounds, &evt.theme.standard.fill);
     if let Some(state) = evt.view.get_state::<GridLayoutState>() {
@@ -125,20 +126,20 @@ fn draw_grid(evt: &mut DrawEvent) {
                 let y = bounds.y() + padding.top;
                 let y2 = bounds.y() + bounds.h() - padding.top * 2;
                 evt.ctx
-                    .line(&Point::new(x, y), &Point::new(x, y2), &Rgb565::RED);
+                    .line(&Point::new(x, y), &Point::new(x, y2), &debug_color);
             }
             for j in 0..state.row_count + 1 {
                 let y = (j * state.row_height) as i32 + bounds.y() + padding.top;
                 let x = bounds.x() + padding.left;
                 let x2 = bounds.x() + bounds.w() - padding.left * 2;
                 evt.ctx
-                    .line(&Point::new(x, y), &Point::new(x2, y), &Rgb565::RED);
+                    .line(&Point::new(x, y), &Point::new(x2, y), &debug_color);
             }
         }
     }
 }
 
-fn layout_grid(pass: &mut LayoutEvent) {
+fn layout_grid<C: PixelColor>(pass: &mut LayoutEvent<C>) {
     let padding = if let Some(state) = pass.scene.get_view_state::<GridLayoutState>(pass.target) {
         state.padding
     } else {
