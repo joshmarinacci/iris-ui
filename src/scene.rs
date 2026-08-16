@@ -361,14 +361,36 @@ fn layout_root_panel(pass: &mut LayoutEvent) {
     }
 }
 
-/// send a click event to the scene
+/// send a pointer-down event (mouse button pressed, or touch contact started) to the scene
+pub fn pointer_down_at(scene: &mut Scene, handlers: &[Callback], pt: Point) -> Option<InputResult> {
+    dispatch_pointer_event(scene, handlers, pt, InputEvent::PointerDown)
+}
+
+/// send a pointer-up event (mouse button released, or touch contact ended) to the scene
+pub fn pointer_up_at(scene: &mut Scene, handlers: &[Callback], pt: Point) -> Option<InputResult> {
+    dispatch_pointer_event(scene, handlers, pt, InputEvent::PointerUp)
+}
+
+/// Convenience helper that simulates a full click/tap: a pointer-down followed
+/// immediately by a pointer-up at the same point. Returns the result of the
+/// pointer-up dispatch, since that is where widgets (e.g. buttons) fire their action.
 pub fn click_at(scene: &mut Scene, handlers: &[Callback], pt: Point) -> Option<InputResult> {
+    pointer_down_at(scene, handlers, pt.clone());
+    pointer_up_at(scene, handlers, pt)
+}
+
+fn dispatch_pointer_event(
+    scene: &mut Scene,
+    handlers: &[Callback],
+    pt: Point,
+    make_event: fn(Point) -> InputEvent,
+) -> Option<InputResult> {
     let targets = pick_at(scene, &pt);
     if let Some((target, pt)) = targets.last() {
         let mut event: GuiEvent = GuiEvent {
             scene,
             target,
-            event_type: InputEvent::Tap(pt.clone()),
+            event_type: make_event(pt.clone()),
             action: None,
         };
         if let Some(view) = event.scene.get_view(target) {

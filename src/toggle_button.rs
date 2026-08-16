@@ -1,6 +1,6 @@
 use crate::geom::Insets;
 use crate::gfx::draw_centered_text;
-use crate::input::OutputAction;
+use crate::input::{InputEvent, OutputAction};
 use crate::view::{View, ViewId};
 use crate::{DrawEvent, GuiEvent, LayoutEvent, util};
 use alloc::boxed::Box;
@@ -57,6 +57,9 @@ fn draw_toggle_button(e: &mut DrawEvent) {
 }
 
 fn input_toggle_button(event: &mut GuiEvent) -> Option<OutputAction> {
+    if !matches!(event.event_type, InputEvent::PointerUp(_)) {
+        return None;
+    }
     if let Some(state) = event.scene.get_view_state::<SelectedState>(event.target) {
         state.selected = !state.selected;
         event.scene.set_focused(event.target);

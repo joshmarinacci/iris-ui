@@ -20,7 +20,7 @@ use iris_ui::button::make_button;
 use iris_ui::geom::{Bounds, Point};
 use iris_ui::label::make_label;
 use iris_ui::scene::Scene;
-use iris_ui::scene::{click_at, draw_scene};
+use iris_ui::scene::{draw_scene, pointer_down_at, pointer_up_at};
 use iris_ui::text_input::make_text_input;
 use iris_ui::view::{Flex, View, ViewId};
 use iris_ui::BW_THEME;
@@ -125,14 +125,26 @@ fn main() -> ! {
     let touch = Gt911Blocking::default();
     touch.init(i2c_ref).unwrap();
 
+    let mut last_touch_point: Option<Point> = None;
     loop {
-        // handle touch inputs
-        if let Ok(point) = touch.get_touch(i2c_ref) {
-            if let Some(point) = point {
-                // flip because the screen is mounted sideways on the t-deck
-                let pt = Point::new(320 - point.y as i32, 240 - point.x as i32);
-                if let Some(result) = click_at(&mut scene, &vec![], pt) {
-                    info!("view returned result {result:?}");
+        // handle touch inputs, with edge-detection so a held finger produces a single
+        // PointerDown followed by a single PointerUp on release, rather than repeating.
+        if let Ok(touch_point) = touch.get_touch(i2c_ref) {
+            match touch_point {
+                Some(point) => {
+                    // flip because the screen is mounted sideways on the t-deck
+                    let pt = Point::new(320 - point.y as i32, 240 - point.x as i32);
+                    if last_touch_point.is_none() {
+                        pointer_down_at(&mut scene, &vec![], pt);
+                    }
+                    last_touch_point = Some(pt);
+                }
+                None => {
+                    if let Some(pt) = last_touch_point.take() {
+                        if let Some(result) = pointer_up_at(&mut scene, &vec![], pt) {
+                            info!("view returned result {result:?}");
+                        }
+                    }
                 }
             }
         }

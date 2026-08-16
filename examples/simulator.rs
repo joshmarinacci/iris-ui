@@ -9,7 +9,9 @@ use embedded_graphics::prelude::RgbColor;
 use embedded_graphics::prelude::WebColors;
 use iris_ui::button::{make_button, make_full_button};
 use iris_ui::geom::{Bounds, Insets, Point as GPoint};
-use iris_ui::scene::{Scene, click_at, draw_scene, event_at_focused, layout_scene};
+use iris_ui::scene::{
+    Scene, draw_scene, event_at_focused, layout_scene, pointer_down_at, pointer_up_at,
+};
 use iris_ui::toggle_button::make_toggle_button;
 use iris_ui::toggle_group::{SelectOneOfState, layout_toggle_group, make_toggle_group};
 use iris_ui::{BW_THEME, FontKind, Theme, ViewStyle, util};
@@ -288,12 +290,14 @@ fn run_loop<C>(
                 SimulatorEvent::MouseButtonUp { point, .. } => {
                     println!("mouse button up {}", point);
                     let lpt = GPoint::new(point.x / scale as i32, point.y / scale as i32);
-                    if let Some(result) = click_at(&mut scene, &vec![], lpt) {
+                    if let Some(result) = pointer_up_at(&mut scene, &vec![], lpt) {
                         handle_events(result, &mut scene, &mut theme);
                     }
                 }
-                SimulatorEvent::MouseButtonDown { .. } => {
-                    println!("mouse down");
+                SimulatorEvent::MouseButtonDown { point, .. } => {
+                    println!("mouse button down {}", point);
+                    let lpt = GPoint::new(point.x / scale as i32, point.y / scale as i32);
+                    pointer_down_at(&mut scene, &vec![], lpt);
                 }
                 SimulatorEvent::MouseWheel {
                     scroll_delta,

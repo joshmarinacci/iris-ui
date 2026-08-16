@@ -50,7 +50,7 @@ impl ListState {
 
 fn input_list(e: &mut GuiEvent) -> Option<OutputAction> {
     match &e.event_type {
-        InputEvent::Tap(pt) => {
+        InputEvent::PointerUp(pt) => {
             e.scene.mark_dirty_view(e.target);
             e.scene.set_focused(e.target);
             if let Some(view) = e.scene.get_view_mut(e.target) {

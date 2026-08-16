@@ -107,7 +107,7 @@ fn input_text_input(event: &mut GuiEvent) -> Option<OutputAction> {
                 }
                 event.scene.mark_dirty_view(event.target);
             }
-            InputEvent::Tap(_pt) => {
+            InputEvent::PointerUp(_pt) => {
                 event.scene.set_focused(event.target);
             }
             _ => {}

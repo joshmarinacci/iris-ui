@@ -1,3 +1,14 @@
+## 2026-08-15
+
+Replaced the single `InputEvent::Tap(Point)` event with `InputEvent::PointerDown(Point)` and `InputEvent::PointerUp(Point)`, so the toolkit can distinguish a press from a release (mouse down/up on desktop, touch down/up on embedded).
+
+- `src/scene.rs`: added `pointer_down_at` / `pointer_up_at`, each hit-testing at the given point and dispatching the corresponding event to the topmost view, exactly like the old `click_at`. `click_at` is now a convenience wrapper that calls `pointer_down_at` then `pointer_up_at` at the same point (simulates a full click) and is unchanged for existing callers/tests.
+- `src/button.rs`: `ButtonState` gained a `pressed: bool` field. `PointerDown` sets focus + `pressed = true` (no action yet); `PointerUp` clears `pressed` and only fires `OutputAction::Command` if the button was actually pressed first. The draw function now inverts fill/text color while pressed, so the button visibly depresses and un-depresses. Added a `tests` module covering press/release/no-op-release/click_at.
+- `src/text_input.rs`, `src/list_view.rs`, `src/toggle_group.rs`: their `InputEvent::Tap` match arms were renamed to `InputEvent::PointerUp` (selection/focus already only made sense on release).
+- `src/toggle_button.rs`: `input_toggle_button` previously reacted to *any* event type; now explicitly filters to `InputEvent::PointerUp` only, otherwise it would double-toggle (once for down, once for up) since `click_at` now dispatches both.
+- `examples/simulator.rs`: `MouseButtonDown` now calls `pointer_down_at` (previously a no-op); `MouseButtonUp` calls `pointer_up_at` instead of `click_at`.
+- `esptest/src/main.rs`: the touch poll loop had no down/up edge detection (it called `click_at` every ~100ms poll while a finger stayed down). Added a `last_touch_point` state so a touch-down fires `pointer_down_at` once, and release (no touch point reported) fires `pointer_up_at` once at the last known point.
+
 ## 2026-08-07
 
 Added `set_focus_enabled(bool)` / `is_focus_enabled()` to `Scene` in `src/scene.rs`. When focus is disabled, `set_focused` is a no-op: `focused` stays `None`, no dirty rects are produced for focus transitions, no focus rings are drawn, and `event_at_focused` dispatches to nothing. Useful on e-paper touch screens where minimizing dirty rects is critical. Three new tests in `focus_disabled_tests` verify the flag prevents dirty rect expansion, that the default (enabled) behaviour is unchanged, and that the flag can be toggled at runtime.

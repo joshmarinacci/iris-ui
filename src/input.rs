@@ -4,7 +4,10 @@ use alloc::string::String;
 
 #[derive(Debug, Copy, Clone)]
 pub enum InputEvent {
-    Tap(Point),
+    /// The pointer (mouse button, or touch contact) went down at this point.
+    PointerDown(Point),
+    /// The pointer (mouse button, or touch contact) was released at this point.
+    PointerUp(Point),
     Scroll(Point),
     Text(TextAction),
     Action(InputAction),

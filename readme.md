@@ -79,9 +79,9 @@ pub fn make_button(name: &ViewId, title: &str) -> View {
         h_flex: Intrinsic,
         // the button will determine its own height
         v_flex: Intrinsic,
-        // on tap, requested to be focused
+        // on release, requested to be focused
         input: Some(|e| {
-            if let EventType::Tap(_pt) = &e.event_type {
+            if let EventType::PointerUp(_pt) = &e.event_type {
                 e.scene.set_focused(e.target);
                 return Some(Action::Generic);
             }
@@ -321,8 +321,10 @@ macOS, DejaVu Sans on Linux).
 ## Event Loop
 
 Iris does not provide its own event loop. Instead use whatever loop is provided by the environment you are using. You
-will need to receive native input events (taps, button clicks, keyboard presses, etc.) and convert them into Iris
-events. In a typical embedded environment it would look something like this:
+will need to receive native input events (touch/mouse down and up, keyboard presses, etc.) and convert them into Iris
+events via `pointer_down_at` / `pointer_up_at` (or the `click_at` convenience wrapper, which performs both at once). In
+a typical embedded environment, driving a touch controller that only reports "is a finger down right now" requires
+tracking the down/up edge yourself, since the toolkit has no built-in debouncing:
 
 ```rust
 #[main]
@@ -352,15 +354,26 @@ fn main() -> ! {
     touch.init(i2c_ref).unwrap();
 
     // event & render loop
+    let mut last_touch_point: Option<GPoint> = None;
     loop {
 
-        // handle touch inputs
-        if let Ok(point) = touch.get_touch(i2c_ref) {
-            if let Some(point) = point {
-                // flip because the screen is mounted sideways on the t-deck
-                let pt = GPoint::new(320 - point.y as i32, 240 - point.x as i32);
-                if let Some(result) = click_at(&mut scene, &vec![], pt) {
-                    info!("view returned result {result:?}");
+        // handle touch inputs, tracking the down/up edge ourselves
+        if let Ok(touch_point) = touch.get_touch(i2c_ref) {
+            match touch_point {
+                Some(point) => {
+                    // flip because the screen is mounted sideways on the t-deck
+                    let pt = GPoint::new(320 - point.y as i32, 240 - point.x as i32);
+                    if last_touch_point.is_none() {
+                        pointer_down_at(&mut scene, &vec![], pt);
+                    }
+                    last_touch_point = Some(pt);
+                }
+                None => {
+                    if let Some(pt) = last_touch_point.take() {
+                        if let Some(result) = pointer_up_at(&mut scene, &vec![], pt) {
+                            info!("view returned result {result:?}");
+                        }
+                    }
                 }
             }
         }
