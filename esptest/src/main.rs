@@ -171,7 +171,7 @@ fn make_gui_scene() -> Scene<Rgb565> {
     };
 
     scene.add_view_to_parent(
-        make_label("label1", "A Label").position_at(10, 30),
+        make_label(&ViewId::make("label1".into()), "A Label").position_at(10, 30),
         &panel.name,
     );
 
@@ -182,7 +182,7 @@ fn make_gui_scene() -> Scene<Rgb565> {
     scene.mark_dirty_all();
 
     scene.add_view_to_parent(
-        make_text_input("textinput", "type text here").position_at(10, 90),
+        make_text_input(&ViewId::make("textinput".into()), "type text here").position_at(10, 90),
         &panel.name,
     );
 
