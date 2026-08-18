@@ -240,7 +240,7 @@ should be used for:
 * **font**: the default font used for all text.
 * **bold_font**: the bold variant of the current font. Used for button titles.
 
-Each color group is a `ViewStyle<C> { fill: C, text: C }`.
+Each color group is a `ViewStyle<C> { fill: C, text: C }` where `C` is the color mode. See below for more information on Color Modes.
 
 ### Color modes
 
