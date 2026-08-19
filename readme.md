@@ -40,6 +40,9 @@ SDL2. [Install instructions](https://docs.rs/embedded-graphics-simulator/latest/
 
 Run the unit tests with `cargo test --features std`.
 
+Regenerate the screenshots in [docs/layout.md](docs/layout.md) from their own code snippets with
+`./scripts/gen_doc_screenshots.sh` (no SDL required — it renders headlessly).
+
 ## Views
 
 Rather than using inheritance, which is a bad fit for Rust, every component / widget / control is an instance of the

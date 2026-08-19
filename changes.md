@@ -1,3 +1,24 @@
+## 2026-08-19 (doc screenshot generator)
+
+Added a script to regenerate the screenshots referenced in `docs/layout.md` directly from the
+Rust snippets next to them, instead of hand-capturing them by running `examples/layout.rs`
+interactively (which silently goes stale whenever a snippet changes).
+
+- `examples/gen_doc_screenshots.rs`: scans `docs/layout.md` for fenced ` ```rust ` blocks
+  followed by a `![...](file.png)` reference, and generates `examples/doc_screenshots.rs` (a
+  gitignored build artifact, not committed) containing one `fn scene_N() -> Scene<Rgb565>` per
+  matched snippet plus a `main()` that renders each headlessly and saves the PNG.
+- `scripts/gen_doc_screenshots.sh`: runs the two examples in sequence (`gen_doc_screenshots` to
+  codegen, then `doc_screenshots --features headless` to render). Uses
+  `embedded-graphics-simulator`'s `headless` feature (`SimulatorDisplay` + `to_rgb_output_image().save_png()`),
+  so no SDL/window is needed.
+- `Cargo.toml`: added a `[[example]] name = "gen_doc_screenshots"` entry; `doc_screenshots` is
+  deliberately *not* declared there since an explicit `[[example]]` entry requires the file to
+  exist at manifest-parse time, which would break every other `cargo` invocation before the file
+  has been generated once.
+- Verified the regenerated PNGs are byte-identical to the previously hand-captured ones, and that
+  editing a single snippet's button label and rerunning only changes that one screenshot.
+
 ## 2026-08-19 (list_view press-then-commit)
 
 `src/list_view.rs`: `input_list` now distinguishes `PointerDown` from `PointerUp`, same pattern as `toggle_group.rs`/`button.rs`.
