@@ -1,3 +1,25 @@
+## 2026-08-19 (list_view press-then-commit)
+
+`src/list_view.rs`: `input_list` now distinguishes `PointerDown` from `PointerUp`, same pattern as `toggle_group.rs`/`button.rs`.
+
+- `ListState` gained a private `pressed: Option<usize>` field.
+- `PointerDown` hit-tests which row the touch landed on (via a new `row_index_at()` helper shared by both handlers) and stores it in `pressed`; sets focus and marks dirty, does not change `selected`.
+- `PointerUp` re-hit-tests the release point and only commits (updating `selected`, firing `OutputAction::Command`) if release lands on the same row that was pressed — dragging off the row before lifting cancels it.
+- `draw_list` inverts fill/text for the currently pressed row (even if not yet `selected`), so the touch is visible before release commits it.
+
+Existing tests (`test_list_view`, `test_list_view_grows_to_fill_parent_width`, `test_list_view_enter_with_stale_selected_no_panic`) needed no changes — `test_list_view` drives via `click_at` (synthesized down+up at the same point), so `pressed == Some(n)` always holds. Verified with `cargo test --features std` (53 passed).
+
+## 2026-08-19
+
+`src/toggle_group.rs`: `input_toggle_group` now distinguishes `PointerDown` from `PointerUp` instead of only reacting to `PointerUp`, mirroring `button.rs`'s press/release pattern.
+
+- `SelectOneOfState` gained a private `pressed: Option<usize>` field.
+- `PointerDown` hit-tests which segment the touch landed on (via a new `cell_index_at()` helper shared by both handlers) and stores it in `pressed`; this only sets focus and marks the view dirty, it does not change `selected`.
+- `PointerUp` re-hit-tests the release point and only commits the selection (updating `selected` and returning `OutputAction::Command`) if the release lands on the same segment that was pressed — dragging off the widget before lifting cancels the tap, same as `button.rs`.
+- `draw_toggle_group` now inverts a segment's fill/text while it is the pressed one (even if not yet `selected`), so the touch is visible before release commits it.
+
+Existing tests (`test_toggle_group`, `test_toggle_group_empty_no_panic`), which drive the widget via `click_at` (a synthesized down+up at one point), needed no changes and still pass — `click_at`'s down and up share the same point, so `pressed == Some(n)` always holds. Verified with `cargo test --features std` (53 passed).
+
 ## 2026-08-16
 
 Parameterized the entire toolkit over the pixel color type instead of hardcoding `Rgb565`, so it can drive displays in any `embedded_graphics::pixelcolor::PixelColor` mode (`Rgb888`, `Gray8`, `BinaryColor`, etc.), not just RGB565.

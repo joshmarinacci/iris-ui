@@ -29,6 +29,7 @@ pub fn make_toggle_group<C: PixelColor>(name: &ViewId, data: Vec<&str>, selected
 pub struct SelectOneOfState {
     pub items: Vec<String>,
     pub selected: usize,
+    pressed: Option<usize>,
 }
 
 impl SelectOneOfState {
@@ -36,27 +37,56 @@ impl SelectOneOfState {
         SelectOneOfState {
             items: items.iter().map(|s| s.to_string()).collect(),
             selected,
+            pressed: None,
         }
+    }
+}
+
+/// Which segment (if any) a point falls over, given the group's bounds and item count.
+fn cell_index_at(bounds: Bounds, item_count: usize, pt: Point) -> Option<usize> {
+    if item_count == 0 {
+        return None;
+    }
+    let cell_width = bounds.size.w / (item_count as i32);
+    let x = pt.x - bounds.x();
+    let n = x / cell_width;
+    if n >= 0 && n < item_count as i32 {
+        Some(n as usize)
+    } else {
+        None
     }
 }
 
 pub fn input_toggle_group<C: PixelColor>(e: &mut GuiEvent<C>) -> Option<OutputAction> {
     match &e.event_type {
-        InputEvent::PointerUp(pt) => {
-            e.scene.mark_dirty_view(e.target);
+        InputEvent::PointerDown(pt) => {
+            let pt = *pt;
             e.scene.set_focused(e.target);
             if let Some(view) = e.scene.get_view_mut(e.target) {
                 let bounds = view.bounds;
                 if let Some(state) = view.get_state::<SelectOneOfState>() {
+                    state.pressed = cell_index_at(bounds, state.items.len(), pt);
+                }
+            }
+            e.scene.mark_dirty_view(e.target);
+        }
+        InputEvent::PointerUp(pt) => {
+            let pt = *pt;
+            e.scene.mark_dirty_view(e.target);
+            if let Some(view) = e.scene.get_view_mut(e.target) {
+                let bounds = view.bounds;
+                if let Some(state) = view.get_state::<SelectOneOfState>() {
+                    let pressed = state.pressed.take();
                     if state.items.is_empty() {
                         return None;
                     }
-                    let cell_width = bounds.size.w / (state.items.len() as i32);
-                    let x = pt.x - bounds.x();
-                    let n = x / cell_width;
-                    if n >= 0 && n < state.items.len() as i32 {
-                        state.selected = n as usize;
-                        return Some(OutputAction::Command(state.items[state.selected].clone()));
+                    // Only commit if released over the same segment that was pressed,
+                    // so dragging off the group before lifting cancels the selection.
+                    if let Some(n) = cell_index_at(bounds, state.items.len(), pt) {
+                        if pressed == Some(n) {
+                            state.selected = n;
+                            return Some(OutputAction::Command(state.items[n].clone()));
+                        }
                     }
                 }
             }
@@ -76,10 +106,19 @@ fn draw_toggle_group<C: PixelColor>(e: &mut DrawEvent<C>) {
         }
         let cell_width = bounds.size.w / (state.items.len() as i32);
         for (i, item) in state.items.iter().enumerate() {
-            let style = if i == state.selected {
+            let is_selected = i == state.selected;
+            let is_pressed = state.pressed == Some(i);
+            let style = if is_selected {
                 e.theme.selected
             } else {
                 e.theme.standard
+            };
+            // While pressed, invert the segment's fill/text so the touch is visible
+            // before release commits the selection (mirrors button.rs's pressed state).
+            let (fill, text) = if is_pressed {
+                (style.text, style.fill)
+            } else {
+                (style.fill, style.text)
             };
             let bds = Bounds::new(
                 bounds.position.x + (i as i32) * cell_width + 1,
@@ -87,18 +126,18 @@ fn draw_toggle_group<C: PixelColor>(e: &mut DrawEvent<C>) {
                 cell_width - 1,
                 bounds.h(),
             );
-            // draw background only if selected
-            if i == state.selected {
-                e.ctx.fill_rect(&bds, &style.fill);
+            // draw background only if selected or currently pressed
+            if is_selected || is_pressed {
+                e.ctx.fill_rect(&bds, &fill);
                 if let Some(focused) = e.focused {
                     if focused == &name {
-                        e.ctx.stroke_rect(&bds.contract(2), &style.text);
+                        e.ctx.stroke_rect(&bds.contract(2), &text);
                     }
                 }
             }
 
             // draw text
-            draw_centered_text(e.ctx, item, &bds, e.theme.font, &style.text);
+            draw_centered_text(e.ctx, item, &bds, e.theme.font, &text);
 
             // draw left edge except for the first one
             if i != 0 {
