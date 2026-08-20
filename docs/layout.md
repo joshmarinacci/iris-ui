@@ -32,7 +32,13 @@ It looks like: *image*
 let mut scene = Scene::new_with_bounds(Bounds::new(0, 0, 320, 240));
 let toolbar_id = ViewId::new("toolbar");
 let toolbar = make_panel(&toolbar_id)
-    .with_layout(Some(layout_hbox));
+    .with_layout(Some(layout_hbox))
+    .with_state(Some(Box::new(PanelState {
+        gap: 5,
+        border_visible: true,
+        padding: Insets::new_same(5),
+    })))
+;
 scene.add_view_to_root(toolbar);
 
 let button1_id = ViewId::new("button1");
@@ -64,10 +70,15 @@ let toolbar_id = ViewId::new("toolbar");
 scene.add_view_to_root(
     make_panel(&toolbar_id)
     .with_layout(Some(layout_hbox))
+    .with_state(Some(Box::new(PanelState {
+        gap: 5,
+        border_visible: true,
+        padding: Insets::new_same(5),
+    })))
     );
 
 scene.add_view_to_parent(make_button(&ViewId::new("button1"), "Apple"), &toolbar_id);
-scene.add_view_to_parent(make_button(&ViewId::new("button2"), "Bar"), &toolbar_id);
+scene.add_view_to_parent(make_button(&ViewId::new("button2"), "Bear"), &toolbar_id);
 scene.add_view_to_parent(make_button(&ViewId::new("button3"), "Cat"), &toolbar_id);
 ```
 
@@ -78,8 +89,8 @@ It still looks like:
 
 ### Centered panel
 
-Now let's make a panel which is centered on the screen but doesn't take up
-the whole screen. Instead it should shrink to the size needed for its children.
+Now let's make a panel which is centered on the screen but doesn't just
+shrink to the size of it's children. We want it to have a fixed width.
 
 ```rust
 
@@ -88,11 +99,17 @@ let toolbar_id = ViewId::new("toolbar");
 
 scene.add_view_to_root(
     make_panel(&toolbar_id)
+    .with_state(Some(Box::new(PanelState {
+        gap: 5,
+        border_visible: true,
+        padding: Insets::new_same(5),
+    })))
     .with_layout(Some(layout_hbox))
     .with_h_align(Align::Center)
     .with_v_align(Align::Center)
-    .with_h_flex(Flex::Shrink)
-    .with_v_flex(Flex::Shrink)
+    .with_h_flex(Flex::Fixed)
+    .with_v_flex(Flex::Fixed)
+    .with_bounds(Bounds::new(0,0,200,200))
 );
 
 scene.add_view_to_parent(make_button(&ViewId::new("button1"), "Apple"), &toolbar_id);
@@ -102,7 +119,7 @@ scene.add_view_to_parent(make_button(&ViewId::new("button3"), "Cat"), &toolbar_i
 ```
 It looks like:
 
-![toolbar centered](centered_toolbar.png)
+![panel centered](centered_toolbar.png)
 
 
 ## Concepts
@@ -147,14 +164,14 @@ A layout function is responsible for:
 
 ## View fields that affect layout
 
-| Field | Type | Default | Meaning |
-|-------|------|---------|---------|
-| `h_flex` | `Flex` | `Shrink` | Horizontal sizing rule |
-| `v_flex` | `Flex` | `Shrink` | Vertical sizing rule |
-| `h_align` | `Align` | `Center` | Horizontal alignment inside a parent |
-| `v_align` | `Align` | `Center` | Vertical alignment inside a parent |
-| `bounds` | `Bounds` | `(0,0,100,100)` | Current position and size (set by layout) |
-| `layout` | `Option<LayoutFn>` | `None` | Function that sizes/positions children |
+| Field     | Type                 | Default         | Meaning                                          |
+|-----------|----------------------|-----------------|--------------------------------------------------|
+| `h_flex`  | `Flex`               | `Shrink`        | Grow, fixed, or shrink horizontally.             |
+| `v_flex`  | `Flex`               | `Shrink`        | Grow, fixed, or shrink vertically.               |
+| `h_align` | `Align`              | `Center`        | horizontal alignment of self.                    |
+| `v_align` | `Align`              | `Center`        | vertical alignment of self.                      |
+| `bounds`  | `Bounds`             | `(0,0,100,100)` | Current position and size (set by layout)        |
+| `layout`  | `Option<LayoutFn>`   | `None`          | An optional function to layout self and children |
 
 Use the builder methods on `View` to set these fluently:
 ```rust
@@ -176,16 +193,13 @@ available area.
 
 ### Align
 
-Controls where a view is placed within the cross-axis slot a parent assigns to it.
+Controls where a view is placed within the parent.
 
 ```
 Align::Start   — flush with the leading edge (left for h_align, top for v_align)
 Align::Center  — centred in the slot (default)
 Align::End     — flush with the trailing edge (right / bottom)
 ```
-
-`h_align` is read by `layout_vbox`; `v_align` is read by `layout_hbox`.
-
 ---
 
 ## Container panels
@@ -197,7 +211,7 @@ Most layout functions require the view to carry a `PanelState` in its `state` fi
 pub struct PanelState {
     pub padding: Insets,  // space between border and children
     pub gap: i32,         // space between consecutive children
-    pub border_visible: bool,
+    pub border_visible: bool, // if the border should be drawn
 }
 ```
 
@@ -220,6 +234,7 @@ let panel = make_panel(&ViewId::new("toolbar"))
 
 ### `layout_vbox` — vertical stack
 
+The layout_vbox function.
 Children are stacked top-to-bottom. `Shrink` children are laid out first (natural size);
 `Grow` children share the remaining vertical space equally.
 

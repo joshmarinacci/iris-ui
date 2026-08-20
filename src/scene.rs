@@ -1,7 +1,7 @@
 use crate::geom::{Bounds, Point};
 use crate::gfx::DrawingContext;
 use crate::input::{InputEvent, InputResult};
-use crate::view::{View, ViewId};
+use crate::view::{Align, View, ViewId};
 use crate::{Callback, DrawEvent, GuiEvent, LayoutEvent, LayoutFn, Theme};
 use alloc::string::ToString;
 use alloc::vec::Vec;
@@ -9,6 +9,7 @@ use alloc::{format, vec};
 use embedded_graphics::pixelcolor::PixelColor;
 use hashbrown::HashMap;
 use log::{info, warn};
+use crate::view::Align::{Center, End, Start};
 
 /// The top level object of the UI tree
 #[derive(Debug)]
@@ -352,13 +353,28 @@ impl<C: PixelColor> Scene<C> {
 }
 
 fn layout_root_panel<C: PixelColor>(pass: &mut LayoutEvent<C>) {
+    // have the root take up all available space
     if let Some(view) = pass.scene.get_view_mut(&pass.target) {
         view.bounds.size.w = pass.space.w;
         view.bounds.size.h = pass.space.h;
     }
+    // call layout on every child
     let kids = pass.scene.get_children_ids(&pass.target).to_vec();
     for kid in &kids {
         pass.layout_child(kid, pass.space);
+        // position each child as desired.
+        if let Some(kid) = pass.scene.get_view_mut(kid) {
+            kid.bounds.position.x = match &kid.h_align {
+                Start => 0,
+                Center => (pass.space.w - kid.bounds.size.w) / 2,
+                End => pass.space.w - kid.bounds.size.w,
+            };
+            kid.bounds.position.y = match &kid.v_align {
+                Start => 0,
+                Center => (pass.space.h - kid.bounds.size.h) / 2,
+                End => pass.space.h - kid.bounds.size.h,
+            };
+        }
     }
 }
 
